@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; img-src 'self' data:; media-src 'self' retro-media:; style-src 'self'; script-src 'self'" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Side B</title>
+    <link rel="stylesheet" href="styles/app.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand"><span class="brand-mark">B</span><div><strong>SIDE B</strong><small>PERSONAL STEREO</small></div></div>
+        <div class="window-tools">
+          <button id="compactButton" class="text-button" aria-pressed="false">COMPACT</button>
+          <button id="pinButton" class="text-button" aria-pressed="false">PIN</button>
+        </div>
+      </header>
+
+      <section class="player-stage">
+        <aside class="now-playing library-panel">
+          <div class="library-panel-heading">
+            <p class="eyebrow">MEDIA LIBRARY</p>
+            <h1>Your library</h1>
+            <p id="libraryHint">Select a folder on your Mac to get started.</p>
+          </div>
+          <button id="libraryButton" class="library-button"><span>＋</span> SELECT MEDIA LIBRARY</button>
+          <div class="library-tabs" role="tablist" aria-label="Library views">
+            <button id="filesTab" class="library-tab active" role="tab" aria-selected="true">FILES</button>
+            <button id="tapesTab" class="library-tab" role="tab" aria-selected="false">TAPES</button>
+          </div>
+          <button id="loadFolderButton" class="load-folder-button" disabled>LOAD INTO MIX-TAPE <span>→</span></button>
+          <div id="folderTree" class="library-browser folder-tree" role="tabpanel" aria-label="Library folders"></div>
+          <div id="tapesTree" class="library-browser tapes-tree" role="tabpanel" aria-label="Tapes collection" hidden></div>
+          <div class="library-utilities">
+            <label class="library-search"><span>⌕</span><input id="librarySearch" type="search" placeholder="Search files…" autocomplete="off" spellcheck="false" /></label>
+            <div class="library-actions">
+              <button id="scanLibraryButton" disabled title="Scan the registered folder for changes">↻ SCAN</button>
+              <button id="addPlaylistButton" title="Import playlists from an Apple Music XML export">⇩ IMPORT</button>
+              <button id="deletePlaylistButton" disabled title="Select a playlist to remove it">−</button>
+            </div>
+          </div>
+        </aside>
+
+        <section class="deck" aria-label="Cassette player">
+          <div class="deck-label"><span>STEREO CASSETTE PLAYER</span><b>RP-80</b></div>
+          <div id="mediaObject" class="media-object">
+            <div id="jCard" class="j-card" aria-label="Album J-card"><span>J-CARD</span></div>
+            <div id="cassette" class="cassette">
+            <div id="cassetteLabel" class="cassette-label">
+              <div class="tape-brand"><b id="tapeAlbum">SIDE B</b><span id="tapeYear">LOCAL TAPE</span></div>
+              <div class="tape-window">
+                <div class="reel-stage">
+                  <div class="reel"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                  <div class="tape-strip"></div>
+                  <div class="reel"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+                </div>
+              </div>
+              <div class="side-label"><b>A</b><strong id="tapeTitle">NO TAPE</strong><span id="tapeArtist">LOCAL STEREO</span></div>
+            </div>
+            <div class="cassette-bottom">
+              <svg class="tape-path" viewBox="0 0 300 82" preserveAspectRatio="none" aria-hidden="true">
+                <path class="tape-shadow" d="M22 0 L48 57 Q52 64 64 64 H236 Q248 64 252 57 L278 0" />
+                <path class="tape-motion" d="M22 0 L48 57 Q52 64 64 64 H236 Q248 64 252 57 L278 0" />
+                <path class="tape-glint" d="M22 0 L48 57 Q52 64 64 64 H236 Q248 64 252 57 L278 0" />
+              </svg>
+              <span class="guide left-guide"></span>
+              <span class="head"></span>
+              <span class="guide right-guide"></span>
+            </div>
+              <div class="mixing-indicator" aria-hidden="true"><span>MIXING</span><i></i></div>
+            </div>
+          </div>
+
+          <div class="transport">
+            <button id="shuffleButton" title="Shuffle">⌘</button>
+            <button id="previousButton" title="Previous">◀◀</button>
+            <button id="stopButton" title="Stop and rewind">■</button>
+            <button id="playButton" class="play" title="Play">▶</button>
+            <button id="nextButton" title="Next">▶▶</button>
+            <button id="repeatButton" title="Repeat">↻</button>
+          </div>
+          <div class="timeline"><span id="currentTime">0:00</span><input id="progress" type="range" min="0" max="100" value="0" /><span id="duration">0:00</span></div>
+          <div class="playback-settings">
+            <label class="smart-toggle" for="smartFadeToggle"><input id="smartFadeToggle" type="checkbox" checked /><span class="switch"><i></i></span><b>SMART FADE</b></label>
+            <label class="theme-toggle" for="darkModeToggle"><input id="darkModeToggle" type="checkbox" /><span class="switch"><i></i></span><b>NIGHT</b></label>
+            <div class="volume"><span>SYSTEM VOL</span><input id="volume" type="range" min="0" max="100" value="50" step="1" /></div>
+          </div>
+        </section>
+
+        <aside class="queue-panel">
+          <div class="queue-heading"><div><p class="eyebrow">UP NEXT</p><h2>Mix-Tape</h2></div><span id="trackCount">0 TRACKS</span></div>
+          <div id="emptyState" class="empty-state"><div class="empty-reel">✣</div><p>No tapes yet.</p><small>Open a folder containing MP3, FLAC, M4A, WAV or OGG files.</small></div>
+          <ol id="queue" class="queue"></ol>
+          <nav id="pagination" class="pagination" aria-label="Mix-Tape pages" hidden>
+            <button id="previousPage" title="Previous page">←</button>
+            <span id="pageLabel">01 / 01</span>
+            <button id="nextPage" title="Next page">→</button>
+          </nav>
+        </aside>
+      </section>
+      <footer><span>● BATTERY</span><span id="folderName">NO TAPE INSERTED</span><span>AUTO REVERSE</span></footer>
+    </main>
+    <audio id="audio"></audio>
+    <script type="module" src="controllers/app-controller.js"></script>
+  </body>
+</html>

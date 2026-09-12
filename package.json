@@ -1,0 +1,55 @@
+{
+  "name": "side-b",
+  "productName": "Side B",
+  "version": "0.2.0",
+  "description": "A local music player inspired by classic cassette Walkmans.",
+  "main": "src/main/index.js",
+  "scripts": {
+    "build:native": "./scripts/build-native.sh",
+    "prestart": "npm run build:native",
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "check": "node scripts/check-syntax.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "dist:mac": "npm run build:native && electron-builder --mac dmg"
+  },
+  "dependencies": {
+    "music-metadata": "^11.8.3",
+    "plist": "^3.1.0"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.15.3",
+    "vitest": "^4.1.11"
+  },
+  "build": {
+    "appId": "com.sideb.player",
+    "productName": "Side B",
+    "asar": true,
+    "asarUnpack": [
+      "build/retro-audio"
+    ],
+    "files": [
+      "src/**/*",
+      "build/retro-audio",
+      "package.json"
+    ],
+    "mac": {
+      "category": "public.app-category.music",
+      "icon": "assets/side-b-icon.png",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64"
+          ]
+        }
+      ]
+    },
+    "dmg": {
+      "title": "Side B ${version}",
+      "artifactName": "Side-B-${version}-${arch}.${ext}"
+    }
+  }
+}

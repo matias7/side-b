@@ -1,0 +1,25 @@
+# Dependencies
+node_modules/
+
+# Generated application artifacts
+dist/
+build/
+coverage/
+
+# Local runtime data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Environment and logs
+.env
+.env.*
+*.log
+npm-debug.log*
+
+# macOS and editors
+.DS_Store
+.idea/
+.vscode/
+*.swp
