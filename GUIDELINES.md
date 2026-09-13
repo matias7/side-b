@@ -94,6 +94,8 @@ Vitest is the default unit-test framework. Place tests in `tests/` with a `.test
 
 Do not create Git commits automatically. Changes remain uncommitted on the active branch until the user explicitly requests a commit, even when implementation and verification are complete.
 
+Day-to-day development and visual experimentation happen on the `experimental` branch. Release candidates are merged into `stable` only after explicit user approval. Versioned DMG artifacts must always be built from a clean `stable` checkout, never directly from `experimental`.
+
 `CHANGELOG.md` must be updated with every change. Add the entry under `[Unreleased]` in the same commit as the code, documentation, build, dependency, behavior or data-model change. Use the Keep a Changelog categories `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` and `Security`; move entries into a dated semantic-version section only when preparing a release.
 
 Before considering a feature complete:

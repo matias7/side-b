@@ -6,13 +6,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-09-13
+
 ### Added
 
 - `AWAKE` window control backed by Electron's display-sleep blocker, preserving its state when the macOS window is closed and reopened.
+- Physical compact-cassette geometry and proportional reel-pack calculations.
 
 ### Changed
 
 - Documented the explicit-authorization requirement for creating Git commits.
+- Made the cassette and J-card resize as one aspect-locked component in normal and compact layouts.
+- Scaled cassette internals from the component width instead of mixing viewport, pixel and percentage units.
+- Reduced the full tape-pack diameter to 75% of the physical maximum for the one-song-per-cassette presentation.
 
 ## [0.2.1] - 2026-09-12
 

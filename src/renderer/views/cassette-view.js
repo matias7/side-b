@@ -1,3 +1,5 @@
+import { tapePackDiameters } from '../models/cassette-geometry.js';
+
 export function createCassetteView({ cassette, mediaObject }) {
   let paletteRequest = 0;
 
@@ -7,9 +9,9 @@ export function createCassetteView({ cassette, mediaObject }) {
   }
 
   function updateTapeProgress(value) {
-    const ratio = Math.max(0, Math.min(1, Number(value) || 0));
-    cassette.style.setProperty('--left-tape', `${108 - 38 * ratio}px`);
-    cassette.style.setProperty('--right-tape', `${70 + 38 * ratio}px`);
+    const { left, right } = tapePackDiameters(value);
+    cassette.style.setProperty('--left-tape', `${left}cqw`);
+    cassette.style.setProperty('--right-tape', `${right}cqw`);
   }
 
   function setDefaultPalette() {

@@ -50,6 +50,8 @@ Vitest currently covers playback sequencing, Shuffle exclusions, Mix-Tape reorde
 
 ## Build a DMG
 
+Release DMGs are built only from the `stable` branch after the approved `experimental` changes have been merged and validated.
+
 ```bash
 npm run dist:mac
 ```
