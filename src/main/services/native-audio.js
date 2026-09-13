@@ -9,6 +9,7 @@ function resolveNativeAudioPath(app, resourcesPath = process.resourcesPath) {
 
 function createNativeAudioService(app, onState) {
   let childProcess;
+  let latestState = null;
 
   function start() {
     if (childProcess && childProcess.exitCode === null && !childProcess.killed) return;
@@ -20,7 +21,11 @@ function createNativeAudioService(app, onState) {
       const lines = pending.split('\n');
       pending = lines.pop();
       for (const line of lines) {
-        try { onState(JSON.parse(line)); } catch {}
+        try {
+          const state = JSON.parse(line);
+          if (state.event === 'state') latestState = state;
+          onState(state);
+        } catch {}
       }
     });
     childProcess.stderr.on('data', (chunk) => console.error(`native audio: ${chunk}`));
@@ -38,7 +43,11 @@ function createNativeAudioService(app, onState) {
     childProcess = null;
   }
 
-  return { start, send, stop };
+  function getState() {
+    return latestState;
+  }
+
+  return { start, send, stop, getState };
 }
 
 module.exports = { createNativeAudioService, resolveNativeAudioPath };

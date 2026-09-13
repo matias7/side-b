@@ -7,6 +7,7 @@ const { createLibraryService } = require('./services/library-service');
 const { createAppleMusicImporter } = require('./services/apple-music-importer');
 const { createAudioAnalyzer } = require('./services/audio-analysis');
 const { createNativeAudioService } = require('./services/native-audio');
+const { createPlaybackSession } = require('./services/playback-session');
 const { registerMediaScheme, handleMediaRequests } = require('./services/media-protocol');
 const { registerIpcHandlers } = require('./ipc/register-handlers');
 const { createMainWindow } = require('./window');
@@ -15,6 +16,13 @@ registerMediaScheme();
 
 let mainWindow;
 let nativeAudio;
+const playbackSession = createPlaybackSession();
+
+function openMainWindow() {
+  mainWindow = createMainWindow();
+  mainWindow.on('closed', () => { mainWindow = null; });
+  return mainWindow;
+}
 
 app.whenReady().then(() => {
   const database = getDatabase(app);
@@ -24,9 +32,10 @@ app.whenReady().then(() => {
   const libraryService = createLibraryService(libraryRepository);
 
   handleMediaRequests();
-  mainWindow = createMainWindow();
+  openMainWindow();
   nativeAudio = createNativeAudioService(app, (state) => {
-    mainWindow?.webContents.send('native-audio:state', state);
+    playbackSession.handleNativeState(state);
+    if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('native-audio:state', state);
   });
   registerIpcHandlers({
     getWindow: () => mainWindow,
@@ -36,12 +45,13 @@ app.whenReady().then(() => {
     libraryService,
     importAppleMusicPlaylists: createAppleMusicImporter(database),
     analyzeAudio: createAudioAnalyzer(),
-    nativeAudio
+    nativeAudio,
+    playbackSession
   });
   nativeAudio.start();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) mainWindow = createMainWindow();
+    if (BrowserWindow.getAllWindows().length === 0) openMainWindow();
   });
 });
 

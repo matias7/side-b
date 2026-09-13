@@ -14,7 +14,8 @@ function registerIpcHandlers({
   libraryService,
   importAppleMusicPlaylists,
   analyzeAudio,
-  nativeAudio
+  nativeAudio,
+  playbackSession
 }) {
   ipcMain.handle('library:choose', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
@@ -84,6 +85,8 @@ function registerIpcHandlers({
   });
 
   ipcMain.handle('telemetry:record', (_event, payload) => telemetryRepository.record(payload));
+  ipcMain.handle('playback-session:update', (_event, payload) => playbackSession.update(payload));
+  ipcMain.handle('playback-session:restore', () => playbackSession.snapshot(nativeAudio.getState()));
   ipcMain.handle('window:always-on-top', (_event, value) => {
     const window = getWindow();
     window.setAlwaysOnTop(Boolean(value), 'floating');

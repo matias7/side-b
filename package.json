@@ -1,7 +1,7 @@
 {
   "name": "side-b",
   "productName": "Side B",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A local music player inspired by classic cassette Walkmans.",
   "main": "src/main/index.js",
   "scripts": {

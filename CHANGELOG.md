@@ -6,11 +6,18 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-09-12
+
 ### Added
 
 - Git repository workflow with `stable` and `experimental` branches.
 - Project contribution and architecture guidelines.
 - Keep a Changelog release history.
+- Main-process playback-session state for rebuilding renderer windows without restarting native playback.
+
+### Fixed
+
+- Restored the active Mix-Tape, artwork, adaptive cassette colors, metadata, playback position and transport state after closing and reopening the macOS window, while safely ignoring native playback events until the new window exists.
 
 ## [0.2.0] - 2026-09-12
 

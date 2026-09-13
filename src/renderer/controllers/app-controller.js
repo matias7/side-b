@@ -37,6 +37,20 @@ function playbackPosition() {
   return currentTrack()?.nativePlayback ? nativeState.currentTime : (audio.currentTime || 0);
 }
 
+function syncPlaybackSession() {
+  window.retroPlayer.savePlaybackSession({
+    tracks,
+    currentIndex,
+    currentPage,
+    queuedNextIndex,
+    playbackId,
+    playbackHasStarted,
+    mixSource,
+    shuffle,
+    repeat
+  }).catch(console.error);
+}
+
 const recordPlaybackEvent = createTelemetryController(() => ({
   playbackId,
   track: currentTrack(),
@@ -140,6 +154,7 @@ function loadTrack(index, autoplay = true, reason = 'loaded') {
     else audio.play().catch((error) => console.error('Could not play the file:', error));
   }
   prepareUpcomingTrack();
+  syncPlaybackSession();
 }
 
 function clearDropMarkers() {
@@ -158,6 +173,7 @@ function reorderTrack(fromIndex, insertionIndex) {
   window.retroPlayer.nativeAudioCommand('cancelNext');
   renderQueue();
   prepareUpcomingTrack();
+  syncPlaybackSession();
 }
 
 function enableQueueDrag(item, index) {
@@ -236,6 +252,35 @@ function applyLibrary(library) {
   recordPlaybackEvent('mix_tape_loaded', { trackCount: tracks.length, directory: library.directory }, null, { position: 0, duration: 0 });
   renderQueue();
   if (tracks.length) loadTrack(0, false);
+  else syncPlaybackSession();
+}
+
+function restorePlaybackSession(session) {
+  if (!session?.tracks?.length) return false;
+  tracks = session.tracks;
+  currentIndex = Math.max(0, Math.min(tracks.length - 1, Number(session.currentIndex) || 0));
+  currentPage = Math.max(0, Number(session.currentPage) || Math.floor(currentIndex / PAGE_SIZE));
+  queuedNextIndex = Number.isInteger(session.queuedNextIndex) ? session.queuedNextIndex : -1;
+  playbackId = session.playbackId || crypto.randomUUID();
+  playbackHasStarted = Boolean(session.playbackHasStarted);
+  mixSource = session.mixSource || { type: 'unknown', name: null };
+  shuffle = Boolean(session.shuffle);
+  repeat = Boolean(session.repeat);
+  els.shuffleButton.classList.toggle('active', shuffle);
+  els.repeatButton.classList.toggle('active', repeat);
+  els.folderName.textContent = String(mixSource.name || 'MIX-TAPE').toUpperCase();
+  renderQueue();
+  paintTrack(currentTrack());
+  if (session.nativeState?.event === 'state') {
+    nativeState = session.nativeState;
+    cassette.classList.toggle('playing', nativeState.playing);
+    els.playButton.textContent = nativeState.playing ? '❚❚' : '▶';
+    els.currentTime.textContent = formatTime(nativeState.currentTime);
+    els.duration.textContent = formatTime(nativeState.duration);
+    els.progress.value = nativeState.duration ? nativeState.currentTime / nativeState.duration * 100 : 0;
+    updateTapeProgress(nativeState.duration ? nativeState.currentTime / nativeState.duration : 0);
+  }
+  return true;
 }
 
 function selectFolder(folderPath) {
@@ -513,10 +558,10 @@ function switchLibraryTab(tab) {
 }
 
 els.previousPage.addEventListener('click', () => {
-  if (currentPage > 0) { currentPage -= 1; renderQueue(); }
+  if (currentPage > 0) { currentPage -= 1; renderQueue(); syncPlaybackSession(); }
 });
 els.nextPage.addEventListener('click', () => {
-  if ((currentPage + 1) * PAGE_SIZE < tracks.length) { currentPage += 1; renderQueue(); }
+  if ((currentPage + 1) * PAGE_SIZE < tracks.length) { currentPage += 1; renderQueue(); syncPlaybackSession(); }
 });
 els.filesTab.addEventListener('click', () => switchLibraryTab('files'));
 els.tapesTab.addEventListener('click', () => switchLibraryTab('tapes'));
@@ -637,11 +682,13 @@ els.shuffleButton.addEventListener('click', () => {
   shuffle = !shuffle;
   els.shuffleButton.classList.toggle('active', shuffle);
   recordPlaybackEvent('shuffle_changed', { enabled: shuffle });
+  syncPlaybackSession();
 });
 els.repeatButton.addEventListener('click', () => {
   repeat = !repeat;
   els.repeatButton.classList.toggle('active', repeat);
   recordPlaybackEvent('repeat_changed', { enabled: repeat });
+  syncPlaybackSession();
 });
 els.volume.addEventListener('input', async () => {
   await window.retroPlayer.setSystemVolume(Number(els.volume.value));
@@ -746,6 +793,7 @@ window.retroPlayer.onNativeAudioState((state) => {
     recordPlaybackEvent('auto_advanced', { via: 'smart_fade', targetIndex: currentIndex }, currentTrack(), { position: 0 });
     recordPlaybackEvent('play_started', { reason: 'smart_fade' }, currentTrack(), { position: 0 });
     prepareUpcomingTrack();
+    syncPlaybackSession();
     return;
   }
   if (state.event === 'prepared') return;
@@ -771,9 +819,21 @@ window.retroPlayer.onNativeAudioState((state) => {
   updateTapeProgress(state.duration ? state.currentTime / state.duration : 0);
 });
 
-window.retroPlayer.loadSavedLibrary().then((library) => {
-  if (library) { applyLibraryTree(library); return; }
-  const legacyRoot = localStorage.getItem('mediaLibraryRoot') || localStorage.getItem('lastFolder');
-  if (legacyRoot) window.retroPlayer.loadLibraryTree(legacyRoot).then((legacyLibrary) => legacyLibrary && applyLibraryTree(legacyLibrary));
-});
-loadPlaylists();
+async function bootstrap() {
+  const [library, session] = await Promise.all([
+    window.retroPlayer.loadSavedLibrary(),
+    window.retroPlayer.restorePlaybackSession()
+  ]);
+  if (library) applyLibraryTree(library);
+  else {
+    const legacyRoot = localStorage.getItem('mediaLibraryRoot') || localStorage.getItem('lastFolder');
+    if (legacyRoot) {
+      const legacyLibrary = await window.retroPlayer.loadLibraryTree(legacyRoot);
+      if (legacyLibrary) applyLibraryTree(legacyLibrary);
+    }
+  }
+  await loadPlaylists();
+  restorePlaybackSession(session);
+}
+
+bootstrap().catch(console.error);

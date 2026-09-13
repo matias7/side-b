@@ -13,6 +13,8 @@ contextBridge.exposeInMainWorld('retroPlayer', {
   importAppleMusicPlaylists: () => ipcRenderer.invoke('playlists:import-apple-music'),
   deletePlaylist: (playlistId) => ipcRenderer.invoke('playlists:delete', playlistId),
   recordPlaybackEvent: (payload) => ipcRenderer.invoke('telemetry:record', payload),
+  savePlaybackSession: (payload) => ipcRenderer.invoke('playback-session:update', payload),
+  restorePlaybackSession: () => ipcRenderer.invoke('playback-session:restore'),
   setAlwaysOnTop: (value) => ipcRenderer.invoke('window:always-on-top', value),
   setCompact: (value) => ipcRenderer.invoke('window:compact', value),
   getSystemVolume: () => ipcRenderer.invoke('system-volume:get'),
