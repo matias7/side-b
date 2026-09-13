@@ -92,6 +92,8 @@ Avoid generic files named `utils.js` or `helpers.js`. Name modules after the dom
 
 Vitest is the default unit-test framework. Place tests in `tests/` with a `.test.js` suffix. Prefer pure deterministic tests, inject randomness when testing Shuffle/Radio, and use in-memory SQLite databases for repository tests. Unit tests must never open or mutate the real database in `userData`.
 
+Do not create Git commits automatically. Changes remain uncommitted on the active branch until the user explicitly requests a commit, even when implementation and verification are complete.
+
 `CHANGELOG.md` must be updated with every change. Add the entry under `[Unreleased]` in the same commit as the code, documentation, build, dependency, behavior or data-model change. Use the Keep a Changelog categories `Added`, `Changed`, `Deprecated`, `Removed`, `Fixed` and `Security`; move entries into a dated semantic-version section only when preparing a release.
 
 Before considering a feature complete:

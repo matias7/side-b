@@ -16,6 +16,8 @@ contextBridge.exposeInMainWorld('retroPlayer', {
   savePlaybackSession: (payload) => ipcRenderer.invoke('playback-session:update', payload),
   restorePlaybackSession: () => ipcRenderer.invoke('playback-session:restore'),
   setAlwaysOnTop: (value) => ipcRenderer.invoke('window:always-on-top', value),
+  getKeepAwake: () => ipcRenderer.invoke('window:keep-awake'),
+  setKeepAwake: (value) => ipcRenderer.invoke('window:keep-awake', value),
   setCompact: (value) => ipcRenderer.invoke('window:compact', value),
   getSystemVolume: () => ipcRenderer.invoke('system-volume:get'),
   setSystemVolume: (value) => ipcRenderer.invoke('system-volume:set', value),

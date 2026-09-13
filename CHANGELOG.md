@@ -6,6 +6,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- `AWAKE` window control backed by Electron's display-sleep blocker, preserving its state when the macOS window is closed and reopened.
+
+### Changed
+
+- Documented the explicit-authorization requirement for creating Git commits.
+
 ## [0.2.1] - 2026-09-12
 
 ### Added

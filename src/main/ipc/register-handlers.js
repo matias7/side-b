@@ -15,7 +15,8 @@ function registerIpcHandlers({
   importAppleMusicPlaylists,
   analyzeAudio,
   nativeAudio,
-  playbackSession
+  playbackSession,
+  wakeLock
 }) {
   ipcMain.handle('library:choose', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
@@ -91,6 +92,9 @@ function registerIpcHandlers({
     const window = getWindow();
     window.setAlwaysOnTop(Boolean(value), 'floating');
     return window.isAlwaysOnTop();
+  });
+  ipcMain.handle('window:keep-awake', (_event, value) => {
+    return typeof value === 'boolean' ? wakeLock.setEnabled(value) : wakeLock.isActive();
   });
   ipcMain.handle('window:compact', (_event, compact) => {
     const window = getWindow();

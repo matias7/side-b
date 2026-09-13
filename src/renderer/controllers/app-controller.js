@@ -745,6 +745,11 @@ els.pinButton.addEventListener('click', async () => {
   const actual = await window.retroPlayer.setAlwaysOnTop(value);
   els.pinButton.setAttribute('aria-pressed', String(actual));
 });
+els.awakeButton.addEventListener('click', async () => {
+  const enabled = els.awakeButton.getAttribute('aria-pressed') !== 'true';
+  const actual = await window.retroPlayer.setKeepAwake(enabled);
+  els.awakeButton.setAttribute('aria-pressed', String(actual));
+});
 els.compactButton.addEventListener('click', async () => {
   const compact = !document.body.classList.contains('compact');
   document.body.classList.toggle('compact', compact);
@@ -820,10 +825,12 @@ window.retroPlayer.onNativeAudioState((state) => {
 });
 
 async function bootstrap() {
-  const [library, session] = await Promise.all([
+  const [library, session, keepAwake] = await Promise.all([
     window.retroPlayer.loadSavedLibrary(),
-    window.retroPlayer.restorePlaybackSession()
+    window.retroPlayer.restorePlaybackSession(),
+    window.retroPlayer.getKeepAwake()
   ]);
+  els.awakeButton.setAttribute('aria-pressed', String(keepAwake));
   if (library) applyLibraryTree(library);
   else {
     const legacyRoot = localStorage.getItem('mediaLibraryRoot') || localStorage.getItem('lastFolder');

@@ -1,4 +1,4 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, powerSaveBlocker } = require('electron');
 const { getDatabase, closeDatabase } = require('./database/connection');
 const { createLibraryRepository } = require('./database/library-repository');
 const { createPlaylistRepository } = require('./database/playlist-repository');
@@ -8,6 +8,7 @@ const { createAppleMusicImporter } = require('./services/apple-music-importer');
 const { createAudioAnalyzer } = require('./services/audio-analysis');
 const { createNativeAudioService } = require('./services/native-audio');
 const { createPlaybackSession } = require('./services/playback-session');
+const { createWakeLockService } = require('./services/wake-lock');
 const { registerMediaScheme, handleMediaRequests } = require('./services/media-protocol');
 const { registerIpcHandlers } = require('./ipc/register-handlers');
 const { createMainWindow } = require('./window');
@@ -17,6 +18,7 @@ registerMediaScheme();
 let mainWindow;
 let nativeAudio;
 const playbackSession = createPlaybackSession();
+const wakeLock = createWakeLockService(powerSaveBlocker);
 
 function openMainWindow() {
   mainWindow = createMainWindow();
@@ -46,7 +48,8 @@ app.whenReady().then(() => {
     importAppleMusicPlaylists: createAppleMusicImporter(database),
     analyzeAudio: createAudioAnalyzer(),
     nativeAudio,
-    playbackSession
+    playbackSession,
+    wakeLock
   });
   nativeAudio.start();
 
@@ -60,6 +63,7 @@ app.on('window-all-closed', () => {
 });
 
 app.on('before-quit', () => {
+  wakeLock.stop();
   nativeAudio?.stop();
   closeDatabase();
 });
