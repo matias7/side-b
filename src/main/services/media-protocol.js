@@ -1,7 +1,7 @@
 const { protocol, net } = require('electron');
 const { pathToFileURL } = require('node:url');
-const { spawn } = require('node:child_process');
-const { Readable } = require('node:stream');
+const { createLosslessCache } = require('./lossless-cache');
+const { resolveFfmpegPath } = require('./platform-audio');
 
 function registerMediaScheme() {
   protocol.registerSchemesAsPrivileged([{
@@ -10,22 +10,20 @@ function registerMediaScheme() {
   }]);
 }
 
-function handleMediaRequests(ffmpegPath = '/opt/homebrew/bin/ffmpeg') {
+function handleMediaRequests(ffmpegPath = resolveFfmpegPath()) {
+  const losslessFile = createLosslessCache(ffmpegPath);
   protocol.handle('retro-media', async (request) => {
-    const mediaUrl = new URL(request.url);
-    const filePath = decodeURIComponent(mediaUrl.pathname.slice(1));
-    if (mediaUrl.searchParams.get('transcode') === 'flac') {
-      const ffmpeg = spawn(ffmpegPath, [
-        '-hide_banner', '-loglevel', 'error', '-i', filePath,
-        '-map', '0:a:0', '-c:a', 'flac', '-f', 'flac', 'pipe:1'
-      ], { stdio: ['ignore', 'pipe', 'pipe'] });
-      request.signal.addEventListener('abort', () => ffmpeg.kill());
-      ffmpeg.stderr.on('data', (chunk) => console.error(`ffmpeg: ${chunk}`));
-      return new Response(Readable.toWeb(ffmpeg.stdout), {
-        headers: { 'Content-Type': 'audio/flac', 'Cache-Control': 'no-store' }
+    try {
+      const mediaUrl = new URL(request.url);
+      let filePath = decodeURIComponent(mediaUrl.pathname.slice(1));
+      if (mediaUrl.searchParams.get('transcode') === 'flac') filePath = await losslessFile(filePath);
+      return net.fetch(pathToFileURL(filePath).toString(), {
+        headers: request.headers, signal: request.signal
       });
+    } catch (error) {
+      console.error('Media playback:', error.message);
+      return new Response('Unable to open audio. ALAC on Windows requires FFmpeg.', { status: 500 });
     }
-    return net.fetch(pathToFileURL(filePath).toString());
   });
 }
 

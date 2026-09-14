@@ -33,6 +33,8 @@ let draggedLibraryTrackPath = null;
 let likedTrackPaths;
 try { likedTrackPaths = new Set(JSON.parse(localStorage.getItem('likedTrackPaths') || '[]')); }
 catch { likedTrackPaths = new Set(); }
+const rejectedRadioPaths = new Set();
+let radioRequestId = 0;
 const expandedFolders = new Set();
 let playbackId = null;
 let playbackHasStarted = false;
@@ -95,9 +97,12 @@ function syncPlaybackControls() {
     els.smartFadeToggle,
   ].forEach((control) => { control.disabled = disabled; });
   document.querySelector('.smart-toggle').classList.toggle('disabled', disabled);
+  els.radioModeButton.disabled = disabled;
+  els.previousButton.disabled = disabled || playbackMode === 'radio';
 }
 
 function chooseNextIndex() {
+  if (playbackMode === 'radio') return tracks.length > 1 ? tracks.findIndex((_, index) => index !== currentIndex) : currentIndex;
   return chooseNextTrackIndex({ trackCount: tracks.length, currentIndex, shuffle: playbackMode === 'shuffle' });
 }
 
@@ -110,15 +115,60 @@ function paintPlaybackMode() {
     });
 }
 
-function setPlaybackMode(mode) {
-  if (!['off', 'shuffle'].includes(mode) || playbackMode === mode) return;
+async function setPlaybackMode(mode) {
+  if (!['off', 'shuffle', 'radio'].includes(mode) || playbackMode === mode) return;
+  if (mode === 'radio' && !currentTrack()) return;
   playbackMode = mode;
   paintPlaybackMode();
   recordPlaybackEvent('playback_mode_changed', { mode });
   queuedNextIndex = -1;
   window.retroPlayer.nativeAudioCommand('cancelNext');
+  if (mode === 'radio') {
+    const playing = currentTrack();
+    tracks = [playing];
+    currentIndex = 0;
+    currentPage = 0;
+    mixSource = { type: 'radio', name: `Radio from ${playing.title}` };
+    rejectedRadioPaths.clear();
+    renderQueue();
+    await requestRadioRecommendation();
+  } else prepareUpcomingTrack();
+  syncPlaybackSession();
+}
+
+async function requestRadioRecommendation() {
+  if (playbackMode !== 'radio' || !currentTrack()) return;
+  const requestId = ++radioRequestId;
+  const anchor = currentTrack();
+  const result = await window.retroPlayer.recommendRadioTrack({
+    currentPath: anchor.path,
+    excludePaths: [...rejectedRadioPaths]
+  }).catch((error) => { console.error('Could not create Radio recommendation:', error); return null; });
+  if (requestId !== radioRequestId || playbackMode !== 'radio' || currentTrack()?.path !== anchor.path) return;
+  tracks = [anchor];
+  currentIndex = 0;
+  if (result?.track) {
+    tracks.push(result.track);
+    queuedNextIndex = 1;
+    recordPlaybackEvent('radio_recommended', { candidatePath: result.track.path, score: result.score, context: result.context }, result.track, { position: 0 });
+  } else queuedNextIndex = -1;
+  renderQueue();
   prepareUpcomingTrack();
   syncPlaybackSession();
+}
+
+async function rateRadioRecommendation(candidate, vote) {
+  const anchor = currentTrack();
+  if (playbackMode !== 'radio' || !anchor || !candidate || ![-1, 1].includes(vote)) return;
+  await window.retroPlayer.recordRadioFeedback(anchor.path, candidate.path, vote);
+  recordPlaybackEvent('radio_feedback', { candidatePath: candidate.path, vote }, candidate, { position: 0 });
+  if (vote < 0) {
+    rejectedRadioPaths.add(candidate.path);
+    tracks = [anchor];
+    queuedNextIndex = -1;
+    renderQueue();
+    await requestRadioRecommendation();
+  }
 }
 
 function prepareUpcomingTrack() {
@@ -158,7 +208,16 @@ function paintTrack(track) {
 function loadTrack(index, autoplay = true, reason = 'loaded') {
   if (!tracks.length) return;
   cassette.classList.remove('mixing');
-  currentIndex = (index + tracks.length) % tracks.length;
+  const targetIndex = (index + tracks.length) % tracks.length;
+  const selectedTrack = tracks[targetIndex];
+  const radioAdvance = playbackMode === 'radio' && targetIndex !== currentIndex;
+  if (radioAdvance) {
+    tracks = [selectedTrack];
+    currentIndex = 0;
+    currentPage = 0;
+    queuedNextIndex = -1;
+    renderQueue();
+  } else currentIndex = targetIndex;
   const trackPage = Math.floor(currentIndex / PAGE_SIZE);
   if (trackPage !== currentPage) {
     currentPage = trackPage;
@@ -184,7 +243,8 @@ function loadTrack(index, autoplay = true, reason = 'loaded') {
     if (track.nativePlayback) window.retroPlayer.nativeAudioCommand('play');
     else audio.play().catch((error) => console.error('Could not play the file:', error));
   }
-  prepareUpcomingTrack();
+  if (radioAdvance) requestRadioRecommendation();
+  else prepareUpcomingTrack();
   syncPlaybackSession();
 }
 
@@ -235,6 +295,19 @@ function replaceCurrentTrack(track) {
     return;
   }
   recordPlaybackEvent('skipped', { reason: 'library_double_click', replacementPath: track.path, playbackStarted: playbackHasStarted });
+  if (playbackMode === 'radio') {
+    radioRequestId += 1;
+    rejectedRadioPaths.clear();
+    tracks = [track];
+    currentIndex = -1;
+    currentPage = 0;
+    queuedNextIndex = -1;
+    window.retroPlayer.nativeAudioCommand('cancelNext');
+    renderQueue();
+    recordPlaybackEvent('manual_selection', { reason: 'library_double_click', targetIndex: 0 }, track, { position: 0 });
+    loadTrack(0, true, 'library_double_click');
+    return;
+  }
   tracks = replaceTrack(tracks, currentIndex, track);
   queuedNextIndex = -1;
   window.retroPlayer.nativeAudioCommand('cancelNext');
@@ -309,14 +382,19 @@ queuePanel.addEventListener('drop', (event) => {
 
 function renderQueue() {
   queue.innerHTML = '';
-  const pageCount = Math.max(1, Math.ceil(tracks.length / PAGE_SIZE));
+  const radioEntries = playbackMode === 'radio'
+    ? tracks.map((track, index) => ({ track, index })).filter((entry) => entry.index !== currentIndex)
+    : null;
+  const visibleCount = radioEntries ? radioEntries.length : tracks.length;
+  const pageCount = Math.max(1, Math.ceil(visibleCount / PAGE_SIZE));
   currentPage = Math.min(currentPage, pageCount - 1);
   const pageStart = currentPage * PAGE_SIZE;
-  tracks.slice(pageStart, pageStart + PAGE_SIZE).forEach((track, pageIndex) => {
-    const index = pageStart + pageIndex;
+  const entries = radioEntries || tracks.map((track, index) => ({ track, index }));
+  entries.slice(pageStart, pageStart + PAGE_SIZE).forEach(({ track, index }, pageIndex) => {
     const li = document.createElement('li');
-    li.title = 'Drag to reorder';
-    li.innerHTML = `<span class="num">${String(index + 1).padStart(2, '0')}</span><span><b></b><small></small></span><span class="time">${formatTime(track.duration)}</span>`;
+    li.title = playbackMode === 'radio' ? 'Next Radio recommendation' : 'Drag to reorder';
+    li.classList.toggle('radio-recommendation', playbackMode === 'radio');
+    li.innerHTML = `<span class="num">${String(pageStart + pageIndex + 1).padStart(2, '0')}</span><span><b></b><small></small></span><span class="time">${formatTime(track.duration)}</span>`;
     li.querySelector('b').textContent = track.title;
     li.querySelector('small').textContent = track.artist;
     li.addEventListener('click', () => {
@@ -325,12 +403,25 @@ function renderQueue() {
       recordPlaybackEvent('manual_selection', { targetIndex: index }, track, { position: 0 });
       loadTrack(index, true, 'queue_selection');
     });
-    enableQueueDrag(li, index);
+    if (playbackMode === 'radio') {
+      const feedback = document.createElement('span');
+      feedback.className = 'radio-feedback';
+      feedback.innerHTML = '<button type="button" class="radio-minus" title="Not for me">−</button><button type="button" class="radio-plus" title="More like this">+</button>';
+      feedback.querySelector('.radio-minus').addEventListener('click', (event) => { event.stopPropagation(); rateRadioRecommendation(track, -1); });
+      feedback.querySelector('.radio-plus').addEventListener('click', (event) => { event.stopPropagation(); rateRadioRecommendation(track, 1); });
+      li.appendChild(feedback);
+    } else enableQueueDrag(li, index);
     queue.appendChild(li);
   });
-  els.emptyState.hidden = Boolean(tracks.length);
-  els.trackCount.textContent = `${tracks.length} TRACK${tracks.length === 1 ? '' : 'S'}`;
-  els.pagination.hidden = tracks.length <= PAGE_SIZE;
+  if (playbackMode === 'radio' && radioEntries.length === 0) {
+    const loading = document.createElement('li');
+    loading.className = 'radio-loading';
+    loading.textContent = 'CALCULATING NEXT TAPE…';
+    queue.appendChild(loading);
+  }
+  els.emptyState.hidden = Boolean(visibleCount) || playbackMode === 'radio';
+  els.trackCount.textContent = `${visibleCount} TRACK${visibleCount === 1 ? '' : 'S'}`;
+  els.pagination.hidden = playbackMode === 'radio' || visibleCount <= PAGE_SIZE;
   els.pageLabel.textContent = `${String(currentPage + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')}`;
   els.previousPage.disabled = currentPage === 0;
   els.nextPage.disabled = currentPage >= pageCount - 1;
@@ -359,7 +450,14 @@ function restorePlaybackSession(session) {
   playbackId = session.playbackId || crypto.randomUUID();
   playbackHasStarted = Boolean(session.playbackHasStarted);
   mixSource = session.mixSource || { type: 'unknown', name: null };
-  playbackMode = session.playbackMode === 'shuffle' || session.shuffle ? 'shuffle' : 'off';
+  playbackMode = ['shuffle', 'radio'].includes(session.playbackMode) ? session.playbackMode : (session.shuffle ? 'shuffle' : 'off');
+  const radioNeedsRecommendation = playbackMode === 'radio' && (currentIndex !== 0 || queuedNextIndex < 0);
+  if (radioNeedsRecommendation) {
+    tracks = [currentTrack()];
+    currentIndex = 0;
+    currentPage = 0;
+    queuedNextIndex = -1;
+  }
   repeat = Boolean(session.repeat);
   paintPlaybackMode();
   els.repeatButton.classList.toggle('active', repeat);
@@ -375,6 +473,7 @@ function restorePlaybackSession(session) {
     els.progress.value = nativeState.duration ? nativeState.currentTime / nativeState.duration * 100 : 0;
     updateTapeProgress(nativeState.duration ? nativeState.currentTime / nativeState.duration : 0);
   }
+  if (radioNeedsRecommendation) requestRadioRecommendation();
   return true;
 }
 
@@ -819,6 +918,7 @@ els.likeButton.addEventListener('click', () => {
 });
 els.offModeButton.addEventListener('click', () => setPlaybackMode('off'));
 els.shuffleModeButton.addEventListener('click', () => setPlaybackMode('shuffle'));
+els.radioModeButton.addEventListener('click', () => setPlaybackMode('radio'));
 els.repeatButton.addEventListener('click', () => {
   repeat = !repeat;
   els.repeatButton.classList.toggle('active', repeat);
@@ -826,7 +926,9 @@ els.repeatButton.addEventListener('click', () => {
   syncPlaybackSession();
 });
 els.volume.addEventListener('input', async () => {
-  await window.retroPlayer.setSystemVolume(Number(els.volume.value));
+  const value = Number(els.volume.value);
+  const systemVolume = await window.retroPlayer.setSystemVolume(value).catch(() => null);
+  if (systemVolume === null) audio.volume = value / 100;
 });
 els.smartFadeToggle.checked = smartFadeEnabled;
 els.darkModeToggle.checked = darkModeEnabled;
@@ -916,7 +1018,11 @@ audio.volume = 1;
 
 async function syncSystemVolume() {
   const volume = await window.retroPlayer.getSystemVolume().catch(() => null);
-  if (volume === null) return;
+  if (volume === null) {
+    els.volume.value = Math.round(audio.volume * 100);
+    els.volume.title = 'Playback volume';
+    return;
+  }
   els.volume.value = volume;
 }
 syncSystemVolume();
@@ -946,6 +1052,14 @@ window.retroPlayer.onNativeAudioState((state) => {
     recordPlaybackEvent('crossfade_completed', { targetIndex: queuedNextIndex }, outgoingTrack);
     cassette.classList.remove('mixing');
     currentIndex = queuedNextIndex;
+    const transitionedTrack = currentTrack();
+    if (playbackMode === 'radio' && transitionedTrack) {
+      tracks = [transitionedTrack];
+      currentIndex = 0;
+      currentPage = 0;
+      queuedNextIndex = -1;
+      renderQueue();
+    }
     playbackId = crypto.randomUUID();
     playbackHasStarted = true;
     const trackPage = Math.floor(currentIndex / PAGE_SIZE);
@@ -953,7 +1067,8 @@ window.retroPlayer.onNativeAudioState((state) => {
     paintTrack(currentTrack());
     recordPlaybackEvent('auto_advanced', { via: 'smart_fade', targetIndex: currentIndex }, currentTrack(), { position: 0 });
     recordPlaybackEvent('play_started', { reason: 'smart_fade' }, currentTrack(), { position: 0 });
-    prepareUpcomingTrack();
+    if (playbackMode === 'radio') requestRadioRecommendation();
+    else prepareUpcomingTrack();
     syncPlaybackSession();
     return;
   }

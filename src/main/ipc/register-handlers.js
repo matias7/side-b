@@ -11,6 +11,7 @@ function registerIpcHandlers({
   libraryRepository,
   playlistRepository,
   telemetryRepository,
+  radioRepository,
   libraryService,
   importAppleMusicPlaylists,
   analyzeAudio,
@@ -87,6 +88,10 @@ function registerIpcHandlers({
   });
 
   ipcMain.handle('telemetry:record', (_event, payload) => telemetryRepository.record(payload));
+  ipcMain.handle('radio:recommend', (_event, payload) => radioRepository.recommend(payload));
+  ipcMain.handle('radio:feedback', (_event, anchorPath, candidatePath, vote) => {
+    return radioRepository.recordFeedback(anchorPath, candidatePath, Number(vote));
+  });
   ipcMain.handle('playback-session:update', (_event, payload) => playbackSession.update(payload));
   ipcMain.handle('playback-session:restore', () => playbackSession.snapshot(nativeAudio.getState()));
   ipcMain.handle('window:always-on-top', (_event, value) => {

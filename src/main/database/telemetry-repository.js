@@ -3,7 +3,7 @@ const ALLOWED_EVENTS = new Set([
   'skipped', 'play_completed', 'repeat_started', 'manual_selection',
   'auto_advanced', 'crossfade_started', 'crossfade_completed',
   'mix_tape_loaded', 'shuffle_changed', 'playback_mode_changed', 'repeat_changed', 'smart_fade_changed',
-  'mix_tape_track_added', 'liked', 'unliked'
+  'mix_tape_track_added', 'liked', 'unliked', 'radio_recommended', 'radio_feedback'
 ]);
 
 function createTelemetryRepository(database) {

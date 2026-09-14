@@ -1,12 +1,14 @@
+const { resolveFfmpegPath } = require('./platform-audio');
 const { spawn } = require('node:child_process');
 
-function createAudioAnalyzer(ffmpegPath = '/opt/homebrew/bin/ffmpeg') {
+function createAudioAnalyzer(ffmpegPath = resolveFfmpegPath()) {
   const cache = new Map();
   return function analyze(filePath, duration) {
     if (cache.has(filePath)) return cache.get(filePath);
     const analysis = new Promise((resolve) => {
       const process = spawn(ffmpegPath, ['-hide_banner', '-i', filePath, '-af', 'silencedetect=noise=-42dB:d=0.25,volumedetect', '-f', 'null', '-'], { stdio: ['ignore', 'ignore', 'pipe'] });
       let output = '';
+      process.on('error', () => resolve({ introEnd: 0, outroStart: duration, mean: -18 }));
       process.stderr.on('data', (chunk) => { output += chunk.toString(); });
       process.on('close', () => {
         const starts = [...output.matchAll(/silence_start: ([\d.]+)/g)].map((match) => Number(match[1]));

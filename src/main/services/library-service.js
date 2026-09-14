@@ -1,3 +1,4 @@
+const { playbackRoute } = require('./platform-audio');
 const path = require('node:path');
 const fs = require('node:fs/promises');
 
@@ -17,6 +18,8 @@ function createLibraryService(repository) {
         title: metadata.common.title || path.basename(filePath, path.extname(filePath)),
         artist: metadata.common.artist || 'Unknown artist',
         album: metadata.common.album || 'Unknown album',
+        genre: Array.isArray(metadata.common.genre) ? metadata.common.genre.join(', ') : String(metadata.common.genre || ''),
+        year: Number(metadata.common.year) || null,
         duration: metadata.format.duration || 0,
         cover: picture ? `data:${picture.format};base64,${Buffer.from(picture.data).toString('base64')}` : null
       };
@@ -29,6 +32,8 @@ function createLibraryService(repository) {
         title: path.basename(filePath, path.extname(filePath)),
         artist: 'Unknown artist',
         album: 'Unknown album',
+        genre: '',
+        year: null,
         duration: 0,
         cover: null
       };
@@ -38,10 +43,10 @@ function createLibraryService(repository) {
   async function indexedTrack(filePath) {
     const stats = await fs.stat(filePath);
     const cached = repository.cachedTrack(filePath);
-    if (cached && cached.row.modified_at === stats.mtimeMs && cached.row.file_size === stats.size) return cached.track;
+    if (cached && cached.row.genre !== null && cached.row.year !== null && cached.row.modified_at === stats.mtimeMs && cached.row.file_size === stats.size) return cached.track;
     const track = await readTrack(filePath);
     repository.saveTrack(filePath, stats, track);
-    return track;
+    return { ...track, ...playbackRoute(filePath, track.nativePlayback) };
   }
 
   async function walk(directory) {

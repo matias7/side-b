@@ -1,18 +1,19 @@
 {
   "name": "side-b",
   "productName": "Side B",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "description": "A local music player inspired by classic cassette Walkmans.",
   "main": "src/main/index.js",
   "scripts": {
-    "build:native": "./scripts/build-native.sh",
+    "build:native": "node scripts/build-native.js",
     "prestart": "npm run build:native",
     "start": "electron .",
     "dev": "electron . --dev",
     "check": "node scripts/check-syntax.js",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dist:mac": "npm run build:native && electron-builder --mac dmg"
+    "dist:mac": "npm run build:native && electron-builder --mac dmg",
+    "dist:win": "npm run build:native && electron-builder --win nsis --x64"
   },
   "dependencies": {
     "music-metadata": "^11.8.3",
@@ -52,6 +53,21 @@
     "dmg": {
       "title": "Side B ${version}",
       "artifactName": "Side-B-${version}-${arch}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Side-B-${version}-Windows-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
     }
   }
 }

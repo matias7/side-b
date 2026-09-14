@@ -13,6 +13,6 @@ describe('native audio executable path', () => {
   });
 
   it('uses the project build directory in development', () => {
-    expect(resolveNativeAudioPath({ isPackaged: false }, '/ignored')).toMatch(/Retro-Player\/build\/retro-audio$/);
+    expect(resolveNativeAudioPath({ isPackaged: false }, '/ignored')).toBe(path.resolve('build/retro-audio'));
   });
 });

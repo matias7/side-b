@@ -31,6 +31,12 @@ describe('playback window session', () => {
     });
   });
 
+  it('persists Radio as a playback mode', () => {
+    const session = createPlaybackSession();
+    session.update({ ...baseState, playbackMode: 'radio', shuffle: false });
+    expect(session.snapshot(null).playbackMode).toBe('radio');
+  });
+
   it('advances the remembered track when a crossfade completes without a window', () => {
     const session = createPlaybackSession();
     session.update(baseState);

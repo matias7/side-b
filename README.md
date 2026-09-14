@@ -1,8 +1,8 @@
 # Side B
 
-Side B is a macOS local music player built with Electron and inspired by cassette Walkmans. Album artwork becomes a physical-looking J-card and drives the cassette label palette while the reels and tape reflect playback progress.
+Side B is a local music player for macOS and an experimental Windows build built with Electron and inspired by cassette Walkmans. Album artwork becomes a physical-looking J-card and drives the cassette label palette while the reels and tape reflect playback progress.
 
-The application is local-first: music, playlists, library indexes and listening history stay on the user's Mac.
+The application is local-first: music, playlists, library indexes and listening history stay on the user's computer.
 
 ## Current features
 
@@ -12,6 +12,7 @@ The application is local-first: music, playlists, library indexes and listening 
 - Apple Music XML import for regular playlists and aggregate listening statistics.
 - Persistent SQLite library and playback-event history.
 - Reorderable and paginated Mix-Tape queue.
+- Local personalized Radio that uses listening history, Apple Music statistics, Likes, skips and artist/album/genre context to keep one next recommendation ready.
 - Individual-song drag and drop from Tapes, plus double-click replacement of the currently inserted song.
 - OFF/Shuffle playback modes and persistent explicit Likes, with the future Radio position reserved in the interface.
 - Smart Fade with silence detection, level matching and transition events.
@@ -93,3 +94,24 @@ See [GUIDELINES.md](GUIDELINES.md) before adding features, [CHANGELOG.md](CHANGE
 ## Project status
 
 Side B is a functional beta. It is intended for local use while playback behavior, library management, recommendations and distribution are developed further.
+
+## Windows (experimental)
+
+On Windows x64, install Node.js/npm, then run `npm install` and `npm start`.
+No Xcode or macOS native helpers are required. Run `npm run dist:win` on Windows
+from the approved clean stable branch to produce an NSIS installer in `dist/`.
+Windows packaging and playback still need validation on a Windows machine.
+
+Windows uses Electron audio. ALAC requires FFmpeg on PATH (`ffmpeg.exe`) or the
+`SIDE_B_FFMPEG_PATH` environment variable pointing to the executable. ALAC is
+converted losslessly into a temporary FLAC before playback, so initial loading
+can be slower; a complete file preserves seeking. The most recent conversion is
+cached; the last temporary file may remain after exit. FFmpeg is not bundled.
+The volume slider controls application audio on Windows. Native Smart Fade,
+macOS Now Playing and trackpad haptics remain macOS-only.
+The Windows database is in Electron's userData folder, normally
+`%APPDATA%/Side B/side-b-library.sqlite`.
+
+Library, queue and telemetry rules stay shared. Source codec information is
+stored independently of runtime backend selection, allowing a future native
+Windows engine without duplicating those rules or migrating the library.

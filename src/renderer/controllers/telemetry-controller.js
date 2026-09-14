@@ -13,6 +13,7 @@ export function createTelemetryController(getContext) {
         title: track.title,
         artist: track.artist,
         album: track.album,
+        genre: track.genre,
         duration: track.duration
       } : null,
       position: overrides.position ?? context.position,

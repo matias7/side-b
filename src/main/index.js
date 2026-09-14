@@ -3,6 +3,7 @@ const { getDatabase, closeDatabase } = require('./database/connection');
 const { createLibraryRepository } = require('./database/library-repository');
 const { createPlaylistRepository } = require('./database/playlist-repository');
 const { createTelemetryRepository } = require('./database/telemetry-repository');
+const { createRadioRepository } = require('./database/radio-repository');
 const { createLibraryService } = require('./services/library-service');
 const { createAppleMusicImporter } = require('./services/apple-music-importer');
 const { createAudioAnalyzer } = require('./services/audio-analysis');
@@ -33,6 +34,7 @@ app.whenReady().then(() => {
   const libraryRepository = createLibraryRepository(database);
   const playlistRepository = createPlaylistRepository(database);
   const telemetryRepository = createTelemetryRepository(database);
+  const radioRepository = createRadioRepository(database);
   const libraryService = createLibraryService(libraryRepository);
 
   handleMediaRequests();
@@ -46,6 +48,7 @@ app.whenReady().then(() => {
     libraryRepository,
     playlistRepository,
     telemetryRepository,
+    radioRepository,
     libraryService,
     importAppleMusicPlaylists: createAppleMusicImporter(database),
     analyzeAudio: createAudioAnalyzer(),

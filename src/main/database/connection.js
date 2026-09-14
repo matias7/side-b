@@ -14,6 +14,8 @@ function migrate(db) {
       title TEXT NOT NULL,
       artist TEXT NOT NULL,
       album TEXT NOT NULL,
+      genre TEXT,
+      year INTEGER,
       duration REAL NOT NULL,
       cover TEXT,
       native_playback INTEGER NOT NULL DEFAULT 0
@@ -77,7 +79,20 @@ function migrate(db) {
       loved INTEGER NOT NULL DEFAULT 0,
       imported_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     );
+    CREATE TABLE IF NOT EXISTS radio_feedback (
+      anchor_path TEXT NOT NULL,
+      candidate_path TEXT NOT NULL REFERENCES tracks(path) ON DELETE CASCADE,
+      vote INTEGER NOT NULL CHECK (vote IN (-1, 1)),
+      vote_count INTEGER NOT NULL DEFAULT 1,
+      updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      PRIMARY KEY (anchor_path, candidate_path, vote)
+    );
+    CREATE INDEX IF NOT EXISTS radio_feedback_candidate ON radio_feedback(candidate_path);
   `);
+
+  const trackColumns = new Set(db.prepare('PRAGMA table_info(tracks)').all().map((column) => column.name));
+  if (!trackColumns.has('genre')) db.exec('ALTER TABLE tracks ADD COLUMN genre TEXT');
+  if (!trackColumns.has('year')) db.exec('ALTER TABLE tracks ADD COLUMN year INTEGER');
 
   const playlistColumns = new Set(db.prepare('PRAGMA table_info(playlists)').all().map((column) => column.name));
   if (!playlistColumns.has('source')) db.exec('ALTER TABLE playlists ADD COLUMN source TEXT');

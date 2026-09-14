@@ -6,20 +6,37 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-14
+
 ### Added
 
+- Added experimental support for Windows: x64 NSIS packaging and platform-aware startup, Electron playback routing, local playback volume and seekable lossless ALAC fallback through FFmpeg.
+- Centralized FFmpeg discovery with PATH, Intel/Apple Silicon and `SIDE_B_FFMPEG_PATH` support.
 - Added native macOS trackpad feedback for button hover and press interactions, with a persistent `HAPTIC` control and silent fallback.
 - Added drag-and-drop insertion of individual library songs into any Mix-Tape position.
 - Added double-click replacement of the current cassette song while preserving the rest of the Mix-Tape.
 - Added a persistent Like control with explicit `liked` and `unliked` telemetry.
-- Added an `OFF / SHUFFLE / RADIO` playback-mode selector with Radio visibly reserved and disabled.
+- Added an `OFF / SHUFFLE / RADIO` playback-mode selector.
+- Added local personalized Radio with an infinite one-track recommendation queue, contextual scoring and explicit `+ / −` feedback.
+- Added genre metadata to the persistent library index for better Radio continuity after a library Scan.
+- Added release-year metadata to the library index as a Radio fallback when genre tags are unavailable.
 
 ### Changed
 
+- Added a mandatory pre-commit release check to confirm whether the application version and changelog need updating.
+- Enabled the Radio position in the playback-mode selector and made it preserve only the current and recommended tracks.
+- Expanded the Radio roadmap with a text-first AI host prototype, optional sourced enrichment and pluggable speech synthesis.
+- Defined the Radio Host as a source-grounded editorial system with narrative connection discovery, silence as a valid choice, anti-repetition memory and separate quality/factuality feedback.
 - Expanded the roadmap with a common cassette-presentation interface and distinct Single Cassette and Album Cassette behaviors.
 - Marked native macOS trackpad haptics as implemented in the interaction roadmap.
 - Replaced the transport Shuffle button with Like and moved Shuffle into the playback-mode selector.
 - Moved the playback-mode selector into the center of the cassette deck header beside the `RP-80` model label.
+
+### Fixed
+
+- Recalculate the Radio recommendation when a library song replaces the current track via double-click.
+- Prevent unrelated exploratory Radio choices from outranking candidates connected by genre, artist, album or a shared playlist.
+- Require temporal compatibility before treating a shared playlist as sufficient Radio context.
 
 ## [0.3.0] - 2026-09-13
 

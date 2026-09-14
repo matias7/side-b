@@ -32,13 +32,13 @@ function createLibraryRepository(database) {
 
     saveTrack(filePath, stats, track) {
       database.prepare(`
-        INSERT INTO tracks(path, modified_at, file_size, title, artist, album, duration, cover, native_playback)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO tracks(path, modified_at, file_size, title, artist, album, genre, year, duration, cover, native_playback)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(path) DO UPDATE SET
           modified_at=excluded.modified_at, file_size=excluded.file_size,
-          title=excluded.title, artist=excluded.artist, album=excluded.album,
+          title=excluded.title, artist=excluded.artist, album=excluded.album, genre=excluded.genre, year=excluded.year,
           duration=excluded.duration, cover=excluded.cover, native_playback=excluded.native_playback
-      `).run(filePath, stats.mtimeMs, stats.size, track.title, track.artist, track.album, track.duration, track.cover, track.nativePlayback ? 1 : 0);
+      `).run(filePath, stats.mtimeMs, stats.size, track.title, track.artist, track.album, track.genre || '', track.year || null, track.duration, track.cover, track.nativePlayback ? 1 : 0);
     },
 
     replaceRootTracks(directory, tracks) {

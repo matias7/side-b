@@ -1,12 +1,14 @@
+const { playbackRoute } = require('../services/platform-audio');
 function storedTrack(row) {
   return {
     id: row.path,
     path: row.path,
-    url: `retro-media://local/${encodeURIComponent(row.path)}`,
-    nativePlayback: Boolean(row.native_playback),
+    ...playbackRoute(row.path, Boolean(row.native_playback)),
     title: row.title,
     artist: row.artist,
     album: row.album,
+    genre: row.genre || '',
+    year: Number(row.year) || null,
     duration: row.duration,
     cover: row.cover || null
   };

@@ -92,7 +92,7 @@ Avoid generic files named `utils.js` or `helpers.js`. Name modules after the dom
 
 Vitest is the default unit-test framework. Place tests in `tests/` with a `.test.js` suffix. Prefer pure deterministic tests, inject randomness when testing Shuffle/Radio, and use in-memory SQLite databases for repository tests. Unit tests must never open or mutate the real database in `userData`.
 
-Do not create Git commits automatically. Changes remain uncommitted on the active branch until the user explicitly requests a commit, even when implementation and verification are complete.
+Do not create Git commits automatically. Changes remain uncommitted on the active branch until the user explicitly requests a commit, even when implementation and verification are complete. Before executing any requested commit, explicitly ask whether the change should update the application version and `CHANGELOG.md`. Assume both are normally required; skip either one only when the user confirms it is unnecessary.
 
 Day-to-day development and visual experimentation happen on the `experimental` branch. Release candidates are merged into `stable` only after explicit user approval. Versioned DMG artifacts must always be built from a clean `stable` checkout, never directly from `experimental`.
 

@@ -7,7 +7,10 @@ function resolveNativeAudioPath(app, resourcesPath = process.resourcesPath) {
     : path.join(__dirname, '..', '..', '..', 'build', 'retro-audio');
 }
 
-function createNativeAudioService(app, onState) {
+function createNativeAudioService(app, onState, platform = process.platform) {
+  if (platform !== 'darwin') {
+    return { start() {}, send() { return false; }, stop() {}, getState() { return null; } };
+  }
   let childProcess;
   let latestState = null;
 
