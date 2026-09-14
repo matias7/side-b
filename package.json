@@ -28,11 +28,13 @@
     "productName": "Side B",
     "asar": true,
     "asarUnpack": [
-      "build/retro-audio"
+      "build/retro-audio",
+      "build/retro-haptics"
     ],
     "files": [
       "src/**/*",
       "build/retro-audio",
+      "build/retro-haptics",
       "package.json"
     ],
     "mac": {

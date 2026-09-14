@@ -25,6 +25,7 @@ describe('playback window session', () => {
       currentIndex: 1,
       playbackId: 'playback-1',
       mixSource: { type: 'playlist', name: 'Road Trip' },
+      playbackMode: 'shuffle',
       shuffle: true,
       nativeState: { event: 'state', playing: true, currentTime: 42, duration: 180 }
     });

@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('retroPlayer', {
   setAlwaysOnTop: (value) => ipcRenderer.invoke('window:always-on-top', value),
   getKeepAwake: () => ipcRenderer.invoke('window:keep-awake'),
   setKeepAwake: (value) => ipcRenderer.invoke('window:keep-awake', value),
+  triggerHaptic: (pattern) => ipcRenderer.send('haptics:trigger', pattern),
   setCompact: (value) => ipcRenderer.invoke('window:compact', value),
   getSystemVolume: () => ipcRenderer.invoke('system-volume:get'),
   setSystemVolume: (value) => ipcRenderer.invoke('system-volume:set', value),

@@ -18,6 +18,7 @@ function createPlaybackSession() {
         type: String(payload.mixSource?.type || 'unknown').slice(0, 40),
         name: payload.mixSource?.name == null ? null : String(payload.mixSource.name).slice(0, 300)
       },
+      playbackMode: payload.playbackMode === 'shuffle' || payload.shuffle ? 'shuffle' : 'off',
       shuffle: Boolean(payload.shuffle),
       repeat: Boolean(payload.repeat)
     };

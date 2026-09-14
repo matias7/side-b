@@ -1,15 +1,16 @@
 import { createCassetteView } from '../views/cassette-view.js';
-import { chooseNextTrackIndex, moveTrack } from '../models/playback-policy.js';
+import { chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../models/playback-policy.js';
 import { createTelemetryController } from './telemetry-controller.js';
 
 const audio = document.querySelector('#audio');
 const cassette = document.querySelector('#cassette');
 const queue = document.querySelector('#queue');
+const queuePanel = document.querySelector('.queue-panel');
 const els = Object.fromEntries([...document.querySelectorAll('[id]')].map((el) => [el.id, el]));
 
 let tracks = [];
 let currentIndex = -1;
-let shuffle = false;
+let playbackMode = 'off';
 let repeat = false;
 let nativeState = { playing: false, currentTime: 0, duration: 0 };
 const PAGE_SIZE = 50;
@@ -25,7 +26,13 @@ let selectedPlaylistId = null;
 let queuedNextIndex = -1;
 let smartFadeEnabled = localStorage.getItem('smartFadeEnabled') !== 'false';
 let darkModeEnabled = localStorage.getItem('darkModeEnabled') === 'true';
+let hapticsEnabled = localStorage.getItem('hapticsEnabled') !== 'false';
+let lastHoverHapticAt = 0;
 let draggedTrackIndex = -1;
+let draggedLibraryTrackPath = null;
+let likedTrackPaths;
+try { likedTrackPaths = new Set(JSON.parse(localStorage.getItem('likedTrackPaths') || '[]')); }
+catch { likedTrackPaths = new Set(); }
 const expandedFolders = new Set();
 let playbackId = null;
 let playbackHasStarted = false;
@@ -46,7 +53,8 @@ function syncPlaybackSession() {
     playbackId,
     playbackHasStarted,
     mixSource,
-    shuffle,
+    playbackMode,
+    shuffle: playbackMode === 'shuffle',
     repeat
   }).catch(console.error);
 }
@@ -57,7 +65,7 @@ const recordPlaybackEvent = createTelemetryController(() => ({
   position: playbackPosition(),
   duration: nativeState.duration || audio.duration || 0,
   source: mixSource,
-  shuffle,
+  shuffle: playbackMode === 'shuffle',
   repeat,
   smartFade: smartFadeEnabled
 }));
@@ -77,7 +85,7 @@ function nowPlayingMetadata(track, index) {
 function syncPlaybackControls() {
   const disabled = tracks.length === 0;
   [
-    els.shuffleButton,
+    els.likeButton,
     els.previousButton,
     els.stopButton,
     els.playButton,
@@ -90,7 +98,27 @@ function syncPlaybackControls() {
 }
 
 function chooseNextIndex() {
-  return chooseNextTrackIndex({ trackCount: tracks.length, currentIndex, shuffle });
+  return chooseNextTrackIndex({ trackCount: tracks.length, currentIndex, shuffle: playbackMode === 'shuffle' });
+}
+
+function paintPlaybackMode() {
+  [['off', els.offModeButton], ['shuffle', els.shuffleModeButton], ['radio', els.radioModeButton]]
+    .forEach(([mode, button]) => {
+      const active = playbackMode === mode;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+}
+
+function setPlaybackMode(mode) {
+  if (!['off', 'shuffle'].includes(mode) || playbackMode === mode) return;
+  playbackMode = mode;
+  paintPlaybackMode();
+  recordPlaybackEvent('playback_mode_changed', { mode });
+  queuedNextIndex = -1;
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  prepareUpcomingTrack();
+  syncPlaybackSession();
 }
 
 function prepareUpcomingTrack() {
@@ -118,6 +146,9 @@ function paintTrack(track) {
   cassette.classList.toggle('has-cover', Boolean(track.cover));
   applyCoverPalette(track.cover);
   els.duration.textContent = formatTime(track.duration);
+  const liked = likedTrackPaths.has(track.path);
+  els.likeButton.classList.toggle('active', liked);
+  els.likeButton.setAttribute('aria-pressed', String(liked));
   updateTapeProgress(0);
   const pageStart = currentPage * PAGE_SIZE;
   [...queue.children].forEach((li, i) => li.classList.toggle('active', pageStart + i === currentIndex));
@@ -176,6 +207,46 @@ function reorderTrack(fromIndex, insertionIndex) {
   syncPlaybackSession();
 }
 
+function addLibraryTrack(track, insertionIndex = tracks.length) {
+  if (!track?.path) return;
+  const destination = Math.max(0, Math.min(tracks.length, insertionIndex));
+  const wasEmpty = tracks.length === 0;
+  tracks = insertTrack(tracks, track, destination);
+  if (!wasEmpty && destination <= currentIndex) currentIndex += 1;
+  queuedNextIndex = -1;
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  recordPlaybackEvent('mix_tape_track_added', { trackPath: track.path, insertionIndex: destination }, track, { position: 0 });
+  renderQueue();
+  if (wasEmpty) loadTrack(0, false, 'library_drop');
+  else {
+    prepareUpcomingTrack();
+    syncPlaybackSession();
+  }
+}
+
+function replaceCurrentTrack(track) {
+  if (!track?.path) return;
+  if (!tracks.length || currentIndex < 0) {
+    tracks = [track];
+    currentIndex = -1;
+    currentPage = 0;
+    renderQueue();
+    loadTrack(0, true, 'library_double_click');
+    return;
+  }
+  recordPlaybackEvent('skipped', { reason: 'library_double_click', replacementPath: track.path, playbackStarted: playbackHasStarted });
+  tracks = replaceTrack(tracks, currentIndex, track);
+  queuedNextIndex = -1;
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  renderQueue();
+  recordPlaybackEvent('manual_selection', { reason: 'library_double_click', targetIndex: currentIndex }, track, { position: 0 });
+  loadTrack(currentIndex, true, 'library_double_click');
+}
+
+function libraryTrackFromDrag() {
+  return tapeLibraryTracks.find((track) => track.path === draggedLibraryTrackPath) || null;
+}
+
 function enableQueueDrag(item, index) {
   item.draggable = true;
   item.dataset.trackIndex = String(index);
@@ -191,19 +262,25 @@ function enableQueueDrag(item, index) {
     event.dataTransfer.setData('text/plain', String(index));
   });
   item.addEventListener('dragover', (event) => {
-    if (draggedTrackIndex < 0 || draggedTrackIndex === index) return;
+    if (draggedTrackIndex < 0 && !draggedLibraryTrackPath) return;
+    if (draggedTrackIndex === index) return;
     event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
+    event.dataTransfer.dropEffect = draggedLibraryTrackPath ? 'copy' : 'move';
     const after = event.clientY >= item.getBoundingClientRect().top + item.offsetHeight / 2;
     queue.querySelectorAll('.drop-before, .drop-after').forEach((row) => row.classList.remove('drop-before', 'drop-after'));
     item.classList.add(after ? 'drop-after' : 'drop-before');
   });
   item.addEventListener('drop', (event) => {
-    if (draggedTrackIndex < 0) return;
+    if (draggedTrackIndex < 0 && !draggedLibraryTrackPath) return;
     event.preventDefault();
+    event.stopPropagation();
     const after = event.clientY >= item.getBoundingClientRect().top + item.offsetHeight / 2;
-    reorderTrack(draggedTrackIndex, index + (after ? 1 : 0));
+    const insertionIndex = index + (after ? 1 : 0);
+    const libraryTrack = libraryTrackFromDrag();
+    if (libraryTrack) addLibraryTrack(libraryTrack, insertionIndex);
+    else reorderTrack(draggedTrackIndex, insertionIndex);
     draggedTrackIndex = -1;
+    draggedLibraryTrackPath = null;
     clearDropMarkers();
   });
   item.addEventListener('dragend', () => {
@@ -211,6 +288,24 @@ function enableQueueDrag(item, index) {
     clearDropMarkers();
   });
 }
+
+queuePanel.addEventListener('dragover', (event) => {
+  if (!draggedLibraryTrackPath || event.target.closest('li')) return;
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'copy';
+  queue.classList.add('library-drop-target');
+});
+queuePanel.addEventListener('dragleave', (event) => {
+  if (!queuePanel.contains(event.relatedTarget)) queue.classList.remove('library-drop-target');
+});
+queuePanel.addEventListener('drop', (event) => {
+  const track = libraryTrackFromDrag();
+  if (!track) return;
+  event.preventDefault();
+  addLibraryTrack(track);
+  draggedLibraryTrackPath = null;
+  queue.classList.remove('library-drop-target');
+});
 
 function renderQueue() {
   queue.innerHTML = '';
@@ -264,9 +359,9 @@ function restorePlaybackSession(session) {
   playbackId = session.playbackId || crypto.randomUUID();
   playbackHasStarted = Boolean(session.playbackHasStarted);
   mixSource = session.mixSource || { type: 'unknown', name: null };
-  shuffle = Boolean(session.shuffle);
+  playbackMode = session.playbackMode === 'shuffle' || session.shuffle ? 'shuffle' : 'off';
   repeat = Boolean(session.repeat);
-  els.shuffleButton.classList.toggle('active', shuffle);
+  paintPlaybackMode();
   els.repeatButton.classList.toggle('active', repeat);
   els.folderName.textContent = String(mixSource.name || 'MIX-TAPE').toUpperCase();
   renderQueue();
@@ -400,6 +495,40 @@ function createTapeSelectionRow(label, groupTracks, detail = '', selectionHandle
   return row;
 }
 
+function createLibraryTrackRow(track) {
+  const row = createTapeSelectionRow(track.title, [track], `SONG · ${track.artist}`);
+  row.classList.add('library-track-row');
+  row.draggable = true;
+  row.title = 'Drag into the Mix-Tape or double-click to play now';
+  row.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    replaceCurrentTrack(track);
+  });
+  row.addEventListener('dragstart', (event) => {
+    draggedLibraryTrackPath = track.path;
+    draggedTrackIndex = -1;
+    row.classList.add('dragging');
+    event.dataTransfer.effectAllowed = 'copy';
+    event.dataTransfer.setData('text/plain', track.path);
+  });
+  row.addEventListener('dragend', () => {
+    draggedLibraryTrackPath = null;
+    row.classList.remove('dragging');
+    queue.classList.remove('library-drop-target');
+    clearDropMarkers();
+  });
+  return row;
+}
+
+function createSongsCategory(allSongs) {
+  const section = createTapeCategory('Songs', []);
+  const header = section.querySelector(':scope > .tape-row');
+  const children = section.querySelector('.tape-group');
+  header.querySelector('.folder-count').textContent = allSongs.length;
+  allSongs.forEach((track) => children.appendChild(createLibraryTrackRow(track)));
+  return section;
+}
+
 function createTapeCategory(label, groups) {
   const section = document.createElement('section');
   section.className = 'tape-category';
@@ -446,9 +575,7 @@ function groupedTracks(keyForTrack, labelForGroup, detailForGroup = () => '') {
 function renderTapesTree() {
   els.tapesTree.innerHTML = '';
   const allSongs = tapeLibraryTracks.slice().sort((a, b) => a.title.localeCompare(b.title));
-  const songsRow = createTapeSelectionRow('Songs', allSongs);
-  songsRow.classList.remove('child');
-  songsRow.firstChild.textContent = '•';
+  const songsCategory = createSongsCategory(allSongs);
   const artists = groupedTracks((track) => track.artist, (track) => track.artist);
   const albums = groupedTracks(
     (track) => `${track.album}\u0000${track.artist}`,
@@ -456,12 +583,12 @@ function renderTapesTree() {
     (track) => track.artist
   );
   els.tapesTree.append(
-    songsRow,
+    songsCategory,
     createTapeCategory('Artists', artists),
     createTapeCategory('Albums', albums),
     createPlaylistsCategory(tapePlaylists)
   );
-  selectTapeGroup('Songs', allSongs, songsRow);
+  selectTapeGroup('Songs', allSongs, songsCategory.querySelector(':scope > .tape-row'));
 }
 
 function renderTapeSearch(query) {
@@ -482,14 +609,16 @@ function renderTapeSearch(query) {
   const results = [
     ...artists.map((group) => ({ ...group, detail: `ARTIST · ${group.tracks.length} TRACKS` })),
     ...albums.map((group) => ({ ...group, detail: `ALBUM · ${group.detail}` })),
-    ...songs.map((track) => ({ label: track.title, detail: `SONG · ${track.artist}`, tracks: [track] })),
+    ...songs.map((track) => ({ label: track.title, detail: `SONG · ${track.artist}`, tracks: [track], track })),
   ].slice(0, 100);
   if (!results.length && !playlists.length) {
     els.tapesTree.innerHTML = '<p class="tapes-loading">NO MATCHING TAPES</p>';
     return;
   }
   playlists.forEach((playlist) => els.tapesTree.appendChild(createPlaylistRow(playlist)));
-  results.forEach((result) => els.tapesTree.appendChild(createTapeSelectionRow(result.label, result.tracks, result.detail)));
+  results.forEach((result) => els.tapesTree.appendChild(result.track
+    ? createLibraryTrackRow(result.track)
+    : createTapeSelectionRow(result.label, result.tracks, result.detail)));
 }
 
 function filterFiles(query) {
@@ -676,14 +805,20 @@ els.previousButton.addEventListener('click', () => {
 });
 els.nextButton.addEventListener('click', () => {
   recordPlaybackEvent('skipped', { reason: 'next', playbackStarted: playbackHasStarted });
-  loadTrack(shuffle ? Math.floor(Math.random() * tracks.length) : currentIndex + 1, true, 'next');
+  loadTrack(chooseNextIndex(), true, 'next');
 });
-els.shuffleButton.addEventListener('click', () => {
-  shuffle = !shuffle;
-  els.shuffleButton.classList.toggle('active', shuffle);
-  recordPlaybackEvent('shuffle_changed', { enabled: shuffle });
-  syncPlaybackSession();
+els.likeButton.addEventListener('click', () => {
+  const track = currentTrack();
+  if (!track) return;
+  const liked = !likedTrackPaths.has(track.path);
+  if (liked) likedTrackPaths.add(track.path); else likedTrackPaths.delete(track.path);
+  localStorage.setItem('likedTrackPaths', JSON.stringify([...likedTrackPaths]));
+  els.likeButton.classList.toggle('active', liked);
+  els.likeButton.setAttribute('aria-pressed', String(liked));
+  recordPlaybackEvent(liked ? 'liked' : 'unliked', { explicit: true });
 });
+els.offModeButton.addEventListener('click', () => setPlaybackMode('off'));
+els.shuffleModeButton.addEventListener('click', () => setPlaybackMode('shuffle'));
 els.repeatButton.addEventListener('click', () => {
   repeat = !repeat;
   els.repeatButton.classList.toggle('active', repeat);
@@ -750,6 +885,27 @@ els.awakeButton.addEventListener('click', async () => {
   const actual = await window.retroPlayer.setKeepAwake(enabled);
   els.awakeButton.setAttribute('aria-pressed', String(actual));
 });
+els.hapticButton.setAttribute('aria-pressed', String(hapticsEnabled));
+els.hapticButton.addEventListener('click', () => {
+  hapticsEnabled = !hapticsEnabled;
+  localStorage.setItem('hapticsEnabled', String(hapticsEnabled));
+  els.hapticButton.setAttribute('aria-pressed', String(hapticsEnabled));
+  if (hapticsEnabled) window.retroPlayer.triggerHaptic('click');
+});
+document.addEventListener('pointerover', (event) => {
+  if (!hapticsEnabled) return;
+  const button = event.target.closest('button');
+  if (!button || button.disabled || button.contains(event.relatedTarget)) return;
+  const now = performance.now();
+  if (now - lastHoverHapticAt < 120) return;
+  lastHoverHapticAt = now;
+  window.retroPlayer.triggerHaptic('hover');
+}, true);
+document.addEventListener('pointerdown', (event) => {
+  if (!hapticsEnabled || event.button !== 0) return;
+  const button = event.target.closest('button');
+  if (button && !button.disabled) window.retroPlayer.triggerHaptic('click');
+}, true);
 els.compactButton.addEventListener('click', async () => {
   const compact = !document.body.classList.contains('compact');
   document.body.classList.toggle('compact', compact);

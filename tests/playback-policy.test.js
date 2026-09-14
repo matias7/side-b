@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseNextTrackIndex, moveTrack } from '../src/renderer/models/playback-policy.js';
+import { chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../src/renderer/models/playback-policy.js';
 
 describe('chooseNextTrackIndex', () => {
   it('keeps the current index when the queue has fewer than two tracks', () => {
@@ -49,5 +49,19 @@ describe('moveTrack', () => {
     const result = moveTrack(queue, 0, 2);
     expect(queue).toEqual(['a', 'b', 'c', 'd']);
     expect(result).not.toBe(queue);
+  });
+});
+
+describe('library interactions', () => {
+  it('inserts a library track without mutating the Mix-Tape', () => {
+    const queue = ['a', 'c'];
+    expect(insertTrack(queue, 'b', 1)).toEqual(['a', 'b', 'c']);
+    expect(queue).toEqual(['a', 'c']);
+  });
+
+  it('replaces only the current cassette track', () => {
+    const queue = ['a', 'b', 'c'];
+    expect(replaceTrack(queue, 1, 'x')).toEqual(['a', 'x', 'c']);
+    expect(queue).toEqual(['a', 'b', 'c']);
   });
 });

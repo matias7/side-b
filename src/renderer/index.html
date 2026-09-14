@@ -12,7 +12,8 @@
       <header class="topbar">
         <div class="brand"><span class="brand-mark">B</span><div><strong>SIDE B</strong><small>PERSONAL STEREO</small></div></div>
         <div class="window-tools">
-          <button id="awakeButton" class="text-button" aria-pressed="false" title="Keep the display awake">AWAKE</button>
+            <button id="awakeButton" class="text-button" aria-pressed="false" title="Keep the display awake">AWAKE</button>
+            <button id="hapticButton" class="text-button" aria-pressed="true" title="Trackpad haptic feedback">HAPTIC</button>
           <button id="compactButton" class="text-button" aria-pressed="false">COMPACT</button>
           <button id="pinButton" class="text-button" aria-pressed="false">PIN</button>
         </div>
@@ -44,7 +45,15 @@
         </aside>
 
         <section class="deck" aria-label="Cassette player">
-          <div class="deck-label"><span>STEREO CASSETTE PLAYER</span><b>RP-80</b></div>
+          <div class="deck-label">
+            <span>STEREO CASSETTE PLAYER</span>
+            <div class="play-mode-selector" role="group" aria-label="Playback mode">
+              <button id="offModeButton" class="active" aria-pressed="true">OFF</button>
+              <button id="shuffleModeButton" aria-pressed="false">SHUFFLE</button>
+              <button id="radioModeButton" aria-pressed="false" disabled title="Radio is coming later">RADIO</button>
+            </div>
+            <b>RP-80</b>
+          </div>
           <div id="mediaObject" class="media-object">
             <div id="jCard" class="j-card" aria-label="Album J-card"><span>J-CARD</span></div>
             <div id="cassette" class="cassette">
@@ -74,7 +83,7 @@
           </div>
 
           <div class="transport">
-            <button id="shuffleButton" title="Shuffle">⌘</button>
+            <button id="likeButton" title="Like current song" aria-pressed="false">♥</button>
             <button id="previousButton" title="Previous">◀◀</button>
             <button id="stopButton" title="Stop and rewind">■</button>
             <button id="playButton" class="play" title="Play">▶</button>

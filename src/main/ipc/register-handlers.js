@@ -16,7 +16,8 @@ function registerIpcHandlers({
   analyzeAudio,
   nativeAudio,
   playbackSession,
-  wakeLock
+  wakeLock,
+  haptics
 }) {
   ipcMain.handle('library:choose', async () => {
     const result = await dialog.showOpenDialog(getWindow(), {
@@ -96,6 +97,7 @@ function registerIpcHandlers({
   ipcMain.handle('window:keep-awake', (_event, value) => {
     return typeof value === 'boolean' ? wakeLock.setEnabled(value) : wakeLock.isActive();
   });
+  ipcMain.on('haptics:trigger', (_event, pattern) => haptics.trigger(pattern));
   ipcMain.handle('window:compact', (_event, compact) => {
     const window = getWindow();
     if (compact) {

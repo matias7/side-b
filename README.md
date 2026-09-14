@@ -12,9 +12,12 @@ The application is local-first: music, playlists, library indexes and listening 
 - Apple Music XML import for regular playlists and aggregate listening statistics.
 - Persistent SQLite library and playback-event history.
 - Reorderable and paginated Mix-Tape queue.
+- Individual-song drag and drop from Tapes, plus double-click replacement of the currently inserted song.
+- OFF/Shuffle playback modes and persistent explicit Likes, with the future Radio position reserved in the interface.
 - Smart Fade with silence detection, level matching and transition events.
 - macOS Now Playing integration, media keys and system-volume control.
 - Light and Night themes, Compact mode, always-on-top mode and adaptive cassette colors.
+- Native macOS trackpad feedback for button hover and press interactions.
 
 ## Requirements
 

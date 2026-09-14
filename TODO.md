@@ -4,7 +4,6 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 
 ## Bugs / ajustes
 
-- [ ] Revisar el comportamiento visual de Compact al entrar y salir de pantalla completa.
 - [ ] Probar exhaustivamente el drag and drop del Mix-Tape entre distintas páginas.
 - [ ] Revisar canciones con metadatos ausentes o inconsistentes (`Unknown artist`, álbum desconocido, etc.).
 
@@ -14,8 +13,8 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 - [x] Diseñar una paleta nocturna retro que conserve contraste, legibilidad, portadas y los acentos amarillo/naranja de Side B.
 - [x] Persistir la preferencia de tema entre sesiones.
 - [ ] Evaluar una tercera opción para seguir automáticamente la apariencia de macOS.
-- [ ] Permitir agregar canciones individuales desde Tapes al Mix-Tape mediante doble clic.
-- [ ] Permitir arrastrar canciones individuales desde la biblioteca y soltarlas en el Mix-Tape.
+- [x] Permitir reemplazar la canción actual desde Tapes mediante doble clic sin alterar el resto del Mix-Tape.
+- [x] Permitir arrastrar canciones individuales desde la biblioteca y soltarlas en el Mix-Tape.
 - [ ] Animar los cambios naturales de canción: congelar los rodillos, extraer el cassette hacia delante y arriba a la izquierda, e insertar el nuevo desde la derecha.
 - [ ] Mantener esa animación como un efecto exclusivamente visual: el audio cambia instantáneamente, no altera Smart Fade/MIXING y no se ejecuta en cambios manuales.
 - [ ] Optimizar el caché de portadas para no guardar repetida la misma imagen Base64 en cada pista de SQLite.
@@ -23,11 +22,14 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 - [ ] Permitir actualizar una importación de Apple Music conservando cambios hechos dentro de Side B.
 - [ ] Mejorar la búsqueda de Files para incluir también nombres de archivos, no solamente carpetas.
 - [ ] Recordar la última selección y el estado expandido de Files/Tapes entre sesiones.
+- [x] Añadir feedback háptico del trackpad de macOS al presionar controles interactivos mediante un puente nativo a `NSHapticFeedbackManager`.
+- [x] Añadir feedback háptico sutil al entrar en hover sobre botones, con debounce/rate limit para evitar vibraciones repetitivas.
+- [x] Ofrecer una preferencia persistente para desactivar completamente el feedback háptico, con fallback silencioso en sistemas no compatibles.
 
 ## Reproductor
 
-- [ ] Reemplazar el botón Shuffle por un switch de tres posiciones o una perilla: `OFF / SHUFFLE / RADIO`.
-- [ ] En `OFF`, respetar el orden manual del Mix-Tape; en `SHUFFLE`, usar reproducción aleatoria; en `RADIO`, activar recomendaciones infinitas.
+- [x] Reemplazar el botón Shuffle por un selector de tres posiciones: `OFF / SHUFFLE / RADIO`, dejando Radio visible pero deshabilitado hasta implementar recomendaciones.
+- [x] En `OFF`, respetar el orden manual del Mix-Tape y en `SHUFFLE` usar reproducción aleatoria.
 - [ ] Al activar Radio, vaciar la cola actual del Mix-Tape y mostrar únicamente la próxima canción recomendada.
 - [ ] Añadir controles `+ / −` sobre la recomendación siguiente: `+` aumenta su afinidad/probabilidad futura y `−` la descarta inmediatamente y busca otra recomendación.
 - [ ] Tratar el voto positivo como preferencia explícita y el negativo como rechazo explícito, separados de reproducciones y skips implícitos.
@@ -36,8 +38,8 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 - [ ] Incorporar penalización por fatiga, skips tempranos y reproducciones recientes, manteniendo una cuota de descubrimiento.
 - [ ] Explorar variantes de Radio: My Radio, From This Song, From This Artist, Work Mode, Deep Cuts, Rediscover y Smart Mix.
 - [ ] Registrar la reacción a cada recomendación para retroalimentar el perfil sin interpretar la reproducción automática como gusto explícito.
-- [ ] Agregar un botón de Like justo encima del reloj de tiempo actual; definir más adelante su icono y estados visuales.
-- [ ] Persistir el Like como una señal explícita del perfil de preferencias y permitir deshacerlo.
+- [x] Reemplazar el antiguo botón Shuffle de la botonera por un botón Like con estado visual.
+- [x] Persistir localmente el Like como señal explícita, registrar `liked` / `unliked` y permitir deshacerlo.
 - [ ] Definir si Shuffle debe terminar, repetir indefinidamente o mantener un historial sin repeticiones.
 - [ ] Guardar y restaurar el Mix-Tape actual al reiniciar Side B.
 - [ ] Guardar posición de reproducción y canción actual entre sesiones.
@@ -74,7 +76,11 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 ## Ideas futuras
 
 - [ ] Ecualizador visual y presets inspirados en reproductores portátiles clásicos.
-- [ ] Temas o modelos alternativos de cassette.
+- [ ] Extraer la presentación completa del cassette a una interfaz común, desacoplada del motor de reproducción y de la cola.
+- [ ] Definir un `Single Cassette` basado en la implementación actual: una canción por cinta y el avance visual calculado sobre esa canción.
+- [ ] Definir un `Album Cassette`: una cinta representa el álbum completo, conserva su posición entre pistas y se desenrolla según el progreso acumulado del disco.
+- [ ] Permitir temas o modelos visuales alternativos implementados sobre la misma interfaz de cassette.
+- [ ] Determinar cómo se selecciona el tipo de cassette y qué sucede al reproducir canciones sueltas, álbumes incompletos o una playlist.
 - [ ] Visualización opcional de espectro/VU meters.
 - [ ] Atajos de teclado configurables.
 - [ ] Integración más profunda con las teclas multimedia y controles remotos.

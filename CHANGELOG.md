@@ -6,6 +6,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+### Added
+
+- Added native macOS trackpad feedback for button hover and press interactions, with a persistent `HAPTIC` control and silent fallback.
+- Added drag-and-drop insertion of individual library songs into any Mix-Tape position.
+- Added double-click replacement of the current cassette song while preserving the rest of the Mix-Tape.
+- Added a persistent Like control with explicit `liked` and `unliked` telemetry.
+- Added an `OFF / SHUFFLE / RADIO` playback-mode selector with Radio visibly reserved and disabled.
+
+### Changed
+
+- Expanded the roadmap with a common cassette-presentation interface and distinct Single Cassette and Album Cassette behaviors.
+- Marked native macOS trackpad haptics as implemented in the interaction roadmap.
+- Replaced the transport Shuffle button with Like and moved Shuffle into the playback-mode selector.
+- Moved the playback-mode selector into the center of the cassette deck header beside the `RP-80` model label.
+
 ## [0.3.0] - 2026-09-13
 
 ### Added

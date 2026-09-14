@@ -9,6 +9,7 @@ const { createAudioAnalyzer } = require('./services/audio-analysis');
 const { createNativeAudioService } = require('./services/native-audio');
 const { createPlaybackSession } = require('./services/playback-session');
 const { createWakeLockService } = require('./services/wake-lock');
+const { createHapticsService } = require('./services/haptics');
 const { registerMediaScheme, handleMediaRequests } = require('./services/media-protocol');
 const { registerIpcHandlers } = require('./ipc/register-handlers');
 const { createMainWindow } = require('./window');
@@ -19,6 +20,7 @@ let mainWindow;
 let nativeAudio;
 const playbackSession = createPlaybackSession();
 const wakeLock = createWakeLockService(powerSaveBlocker);
+const haptics = createHapticsService(app);
 
 function openMainWindow() {
   mainWindow = createMainWindow();
@@ -49,7 +51,8 @@ app.whenReady().then(() => {
     analyzeAudio: createAudioAnalyzer(),
     nativeAudio,
     playbackSession,
-    wakeLock
+    wakeLock,
+    haptics
   });
   nativeAudio.start();
 
@@ -64,6 +67,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   wakeLock.stop();
+  haptics.stop();
   nativeAudio?.stop();
   closeDatabase();
 });
