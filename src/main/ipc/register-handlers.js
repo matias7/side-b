@@ -67,6 +67,11 @@ function registerIpcHandlers({
     try { return await libraryService.scan(directory); } catch { return null; }
   });
 
+  ipcMain.handle('playlists:save', (_event, payload) => {
+    try { return { playlist: playlistRepository.save(payload) }; }
+    catch (error) { return { error: error.message }; }
+  });
+
   ipcMain.handle('playlists:list', () => playlistRepository.list());
   ipcMain.handle('playlists:tracks', (_event, playlistId) => {
     const id = Number(playlistId);
@@ -115,17 +120,21 @@ function registerIpcHandlers({
   });
   ipcMain.handle('system-volume:get', getSystemVolume);
   ipcMain.handle('system-volume:set', (_event, value) => setSystemVolume(value));
+  let fadeRequestId = 0;
   ipcMain.handle('native-audio:command', (_event, action, payload = {}) => {
     if (!['load', 'play', 'pause', 'stop', 'seek', 'prepareNext', 'cancelNext', 'clearNowPlaying'].includes(action)) return false;
+    if (['load', 'stop', 'cancelNext', 'seek'].includes(action)) fadeRequestId += 1;
     nativeAudio.send(action, payload);
     return true;
   });
   ipcMain.handle('smart-fade:prepare', async (_event, current, next) => {
     if (!current?.path || !next?.path) return false;
+    const requestId = ++fadeRequestId;
     const [currentAnalysis, nextAnalysis] = await Promise.all([
       analyzeAudio(current.path, current.duration),
       analyzeAudio(next.path, next.duration)
     ]);
+    if (requestId !== fadeRequestId) return false;
     const nextGain = Math.max(.65, Math.min(1, Math.pow(10, (currentAnalysis.mean - nextAnalysis.mean) / 20)));
     nativeAudio.send('prepareNext', {
       path: next.path,

@@ -29,3 +29,8 @@ export function moveTrack(tracks, fromIndex, insertionIndex) {
   reordered.splice(destination, 0, moved);
   return reordered;
 }
+
+export function clearUpcomingTracks(tracks, currentIndex) {
+  const current = tracks[currentIndex];
+  return { tracks: current ? [current] : [], currentIndex: current ? 0 : -1 };
+}

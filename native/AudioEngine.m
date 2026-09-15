@@ -11,6 +11,7 @@
 @property(nonatomic) double transitionAt, nextStart, fadeDuration;
 @property(nonatomic) float nextGain;
 @property(nonatomic) BOOL transitioning;
+@property(nonatomic) NSUInteger transitionGeneration;
 @end
 
 @implementation AudioEngine
@@ -131,6 +132,7 @@
 }
 
 - (void)load:(NSDictionary *)command {
+  self.transitionGeneration += 1;
   [self.player stop]; [self.nextPlayer stop];
   self.nextPlayer = nil; self.nextMetadata = nil; self.transitioning = NO;
   self.metadata = command[@"metadata"];
@@ -162,7 +164,9 @@
     [self.nextPlayer play];
     [self.player setVolume:0 fadeDuration:self.fadeDuration];
     [self.nextPlayer setVolume:self.nextGain fadeDuration:self.fadeDuration];
+    NSUInteger generation = self.transitionGeneration;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(self.fadeDuration * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+      if (generation != self.transitionGeneration || !self.transitioning || !self.nextPlayer) return;
       [self.player stop];
       self.player = self.nextPlayer;
       self.player.volume = 1;
@@ -182,7 +186,7 @@
   NSString *action = command[@"action"];
   if ([action isEqualToString:@"load"]) { [self load:command]; return; }
   if ([action isEqualToString:@"prepareNext"]) { [self prepareNext:command]; return; }
-  if ([action isEqualToString:@"cancelNext"]) { [self.nextPlayer stop]; self.nextPlayer = nil; self.nextMetadata = nil; self.transitioning = NO; return; }
+  if ([action isEqualToString:@"cancelNext"]) { self.transitionGeneration += 1; self.player.volume = 1; [self.nextPlayer stop]; self.nextPlayer = nil; self.nextMetadata = nil; self.transitioning = NO; return; }
   if ([action isEqualToString:@"play"]) {
     [self.player play];
     [self publishNowPlayingAt:self.player.currentTime duration:self.player.duration playing:YES];
@@ -190,6 +194,8 @@
     [self.player pause]; [self.nextPlayer pause];
     [self publishNowPlayingAt:self.player.currentTime duration:self.player.duration playing:NO];
   } else if ([action isEqualToString:@"stop"]) {
+    self.transitionGeneration += 1;
+    self.player.volume = 1;
     [self.player stop]; self.player.currentTime = 0; [self.player prepareToPlay];
     [self.nextPlayer stop]; self.nextPlayer = nil; self.nextMetadata = nil; self.transitioning = NO;
     [self publishNowPlayingAt:0 duration:self.player.duration playing:NO];

@@ -28,6 +28,40 @@ describe('SQLite repositories', () => {
     `).run(filePath, title);
   }
 
+  it('creates empty playlists and preserves ordered duplicates from a Mix-Tape', () => {
+    insertTrack('/music/a.m4a', 'A');
+    insertTrack('/music/b.m4a', 'B');
+    const empty = playlists.save({ name: ' Empty ', paths: [] });
+    expect(playlists.tracks(empty.id)).toEqual([]);
+    const saved = playlists.save({ name: 'Mix', paths: ['/music/b.m4a', '/music/a.m4a', '/music/b.m4a'] });
+    expect(playlists.tracks(saved.id).map(track => track.title)).toEqual(['B', 'A', 'B']);
+    expect(playlists.list().find(item => item.id === empty.id).name).toBe('Empty');
+  });
+
+  it('renames and replaces playlist contents atomically without altering source tracks', () => {
+    insertTrack('/music/a.m4a', 'A');
+    insertTrack('/music/b.m4a', 'B');
+    const saved = playlists.save({ name: 'Mix', paths: ['/music/a.m4a', '/music/b.m4a'] });
+    playlists.save({ id: saved.id, name: 'New name', paths: ['/music/b.m4a'] });
+    expect(playlists.list()[0]).toMatchObject({ name: 'New name', trackCount: 1 });
+    expect(playlists.tracks(saved.id).map(track => track.title)).toEqual(['B']);
+    expect(database.prepare('SELECT COUNT(*) AS count FROM tracks').get().count).toBe(2);
+    expect(() => playlists.save({ id: saved.id, name: 'Broken', paths: ['/music/a.m4a', '/missing'] })).toThrow();
+    expect(playlists.list()[0]).toMatchObject({ name: 'New name', trackCount: 1 });
+    expect(playlists.tracks(saved.id).map(track => track.title)).toEqual(['B']);
+  });
+
+  it('rejects invalid drafts and protects imported playlists', () => {
+    for (const payload of [null, {}, { name: ' ', paths: [] }, { name: 'x', paths: [12] }, { id: -1, name: 'x', paths: [] }]) {
+      expect(() => playlists.save(payload)).toThrow();
+    }
+    expect(() => playlists.save({ name: 'x', paths: ['/missing'] })).toThrow();
+    expect(playlists.list()).toEqual([]);
+    const id = Number(database.prepare("INSERT INTO playlists(name, source) VALUES ('Imported', 'apple-music')").run().lastInsertRowid);
+    expect(() => playlists.save({ id, name: 'Overwritten', paths: [] })).toThrow(/Only local/);
+    expect(playlists.list()[0].name).toBe('Imported');
+  });
+
   it('stores and restores the selected library tree', () => {
     const tree = { name: 'Music', path: '/music', totalTrackCount: 2, children: [] };
     library.saveState('/music', tree);

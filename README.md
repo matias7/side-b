@@ -11,7 +11,8 @@ The application is local-first: music, playlists, library indexes and listening 
 - Files browser and logical Songs, Artists, Albums and Playlists views.
 - Apple Music XML import for regular playlists and aggregate listening statistics.
 - Persistent SQLite library and playback-event history.
-- Reorderable and paginated Mix-Tape queue.
+- Reorderable and paginated Mix-Tape queue, with Save Playlist and Clear controls.
+- Local playlists: create, rename, add/remove songs and persist their order.
 - Local personalized Radio that uses listening history, Apple Music statistics, Likes, skips and artist/album/genre context to keep one next recommendation ready.
 - Individual-song drag and drop from Tapes, plus double-click replacement of the currently inserted song.
 - OFF/Shuffle playback modes and persistent explicit Likes, with the future Radio position reserved in the interface.
@@ -115,3 +116,36 @@ The Windows database is in Electron's userData folder, normally
 Library, queue and telemetry rules stay shared. Source codec information is
 stored independently of runtime backend selection, allowing a future native
 Windows engine without duplicating those rules or migrating the library.
+
+## Create and edit playlists
+
+Use **＋ PLAYLIST** below the library search to create a local playlist. The
+editor lets you name it, search indexed songs, add or remove tracks, and move
+tracks up or down. Empty playlists and repeated songs are supported.
+Select a local playlist under **Tapes → Playlists**, then choose **EDIT**.
+Changes are saved together; Cancel or Escape discards the draft.
+
+**SAVE PLAYLIST** above the Mix-Tape opens a new playlist with the whole queue
+in its current order, including repeated songs. Save Playlist and Clear are hidden in Radio mode. Saving or editing does not alter
+the loaded Mix-Tape. To edit an Apple Music import, load it into the Mix-Tape
+and save a local copy.
+
+**CLEAR** removes all other tracks from the Mix-Tape and cancels pending Smart
+Fade work, preserving the current song, position and playing/paused state. It does not delete music files, playlists, Likes or listening history.
+Playlist controls are in the full layout; exit Compact to use them.
+
+## Listening history and queue
+
+The Mix-Tape shows the current song under **NOW PLAYING** and only pending songs
+under **UP NEXT**. Playing a pending song removes that occurrence from the queue.
+OFF and Shuffle stop when no pending tracks remain; Repeat repeats the current song.
+
+Scroll up to NOW PLAYING, pause briefly, then scroll up again to reveal the session
+history. Selecting a history entry replays it without consuming pending songs.
+Each listen remains a separate entry, including repeats and skipped songs that
+started playing. Only visible history rows are rendered, while all entries remain
+in memory. The history survives closing and reopening the macOS window and clears
+when Side B quits. Listening statistics remain stored separately in SQLite.
+
+Clear preserves current playback and history. Save Playlist includes the current
+song and pending songs, excluding history. Both controls are hidden in Radio.

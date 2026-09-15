@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../src/renderer/models/playback-policy.js';
+import { clearUpcomingTracks, chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../src/renderer/models/playback-policy.js';
 
 describe('chooseNextTrackIndex', () => {
   it('keeps the current index when the queue has fewer than two tracks', () => {
@@ -63,5 +63,19 @@ describe('library interactions', () => {
     const queue = ['a', 'b', 'c'];
     expect(replaceTrack(queue, 1, 'x')).toEqual(['a', 'x', 'c']);
     expect(queue).toEqual(['a', 'b', 'c']);
+  });
+});
+
+describe('clear upcoming tracks', () => {
+  it('preserves the current track object and leaves the source queue unchanged', () => {
+    const tracks = [{ id: 'a' }, { id: 'b' }, { id: 'c' }];
+    const cleared = clearUpcomingTracks(tracks, 1);
+    expect(cleared).toEqual({ tracks: [tracks[1]], currentIndex: 0 });
+    expect(cleared.tracks[0]).toBe(tracks[1]);
+    expect(tracks).toHaveLength(3);
+  });
+  it('clears an unloaded queue and safely accepts an empty queue', () => {
+    expect(clearUpcomingTracks([{ id: 'a' }], -1)).toEqual({ tracks: [], currentIndex: -1 });
+    expect(clearUpcomingTracks([], -1)).toEqual({ tracks: [], currentIndex: -1 });
   });
 });

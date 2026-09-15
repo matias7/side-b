@@ -57,3 +57,12 @@ body.dark{background:radial-gradient(circle at 50% 10%,#34352f 0,#141512 52%,#08
 body.compact .now-playing,body.compact .queue-panel{display:none}body.compact .player-stage{display:block}body.compact .deck{height:100%;border:0;padding:12px 26px;align-items:center}body.compact .deck-label,body.compact .transport,body.compact .timeline,body.compact .playback-settings{width:100%;max-width:680px}body.compact .media-object{width:min(76%,680px)}body.compact .deck-label{margin-bottom:6px}body.compact .transport{margin-top:8px}body.compact .timeline{margin-top:4px}body.compact .playback-settings{margin-top:6px}body.compact .topbar{height:64px}body.compact footer{display:none}
 @media(max-width:900px){.player-stage{grid-template-columns:1fr 1.5fr}.queue-panel{display:none}.deck{border-right:0}}@media(max-width:650px){body{padding:0}.app-shell{height:100vh;border-radius:0}.now-playing{display:none}.player-stage{display:block}.deck{height:100%;border:0;padding:24px}}
 .library-track-row{cursor:grab}.library-track-row:active{cursor:grabbing}.library-track-row.dragging{opacity:.35}.queue.library-drop-target{outline:3px dashed var(--orange);outline-offset:-5px;background:#e9572f12}.dark .play-mode-selector{border-color:#aaa18d}.dark .play-mode-selector button{color:#ece4d2}.dark .play-mode-selector button+button{border-color:#aaa18d}.dark .play-mode-selector button.active{color:#171714}
+
+/* The cassette fits the space left between the deck heading and controls. */
+.topbar,footer{flex-shrink:0}
+.player-stage{grid-template-rows:minmax(0,1fr)}
+.deck{min-height:0;min-width:0}
+.deck-label,.transport,.timeline,.playback-settings{flex-shrink:0}
+.media-slot{flex:1;min-height:0;width:100%;container-type:size;display:grid;place-items:center}
+.media-slot .media-object{width:min(84%,680px,110cqh)}
+body.compact .media-slot .media-object{width:min(76%,680px,110cqh)}

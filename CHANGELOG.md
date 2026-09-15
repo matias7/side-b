@@ -6,6 +6,28 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-15
+
+### Added
+
+- Session-only listening history above the pending queue, with virtualized rows and replay without consuming pending tracks.
+
+- Added a NOW PLAYING scroll boundary: the first upward gesture stops at the queue start, and a separate upward gesture reveals session history.
+- Local playlist editor with names, library search, song insertion/removal and persistent ordering, including empty playlists and repeated tracks.
+- Mix-Tape Save Playlist and Clear buttons; Clear preserves the current song and playback position while removing other tracks; both buttons are hidden in Radio.
+
+### Changed
+
+- Playing a pending song consumes that queue entry; OFF and Shuffle stop when no pending songs remain.
+- Current playback, pending songs and listening history are presented separately. Each replay becomes a new listening entry.
+- Removed cross-restart session restoration from the roadmap; history survives macOS window reopening but resets when the app quits.
+
+### Fixed
+
+- Cancel pending Smart Fade analysis when clearing upcoming tracks without stopping current playback.
+- Fit the cassette to the available deck height and reserve footer space to prevent the center panel from overflowing.
+- Invalidate delayed native crossfade callbacks after cancel, stop or loading another track.
+
 ## [0.4.1] - 2026-09-14
 
 ### Added

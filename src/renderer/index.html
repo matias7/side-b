@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Side B</title>
     <link rel="stylesheet" href="styles/app.css" />
+    <link rel="stylesheet" href="styles/playlists.css" />
   </head>
   <body>
     <main class="app-shell">
@@ -36,6 +37,7 @@
           <div id="tapesTree" class="library-browser tapes-tree" role="tabpanel" aria-label="Tapes collection" hidden></div>
           <div class="library-utilities">
             <label class="library-search"><span>⌕</span><input id="librarySearch" type="search" placeholder="Search files…" autocomplete="off" spellcheck="false" /></label>
+            <div class="playlist-actions"><button id="newPlaylistButton">＋ PLAYLIST</button><button id="editPlaylistButton" disabled>EDIT</button></div>
             <div class="library-actions">
               <button id="scanLibraryButton" disabled title="Scan the registered folder for changes">↻ SCAN</button>
               <button id="addPlaylistButton" title="Import playlists from an Apple Music XML export">⇩ IMPORT</button>
@@ -54,6 +56,7 @@
             </div>
             <b>RP-80</b>
           </div>
+          <div class="media-slot">
           <div id="mediaObject" class="media-object">
             <div id="jCard" class="j-card" aria-label="Album J-card"><span>J-CARD</span></div>
             <div id="cassette" class="cassette">
@@ -82,6 +85,7 @@
             </div>
           </div>
 
+          </div>
           <div class="transport">
             <button id="likeButton" title="Like current song" aria-pressed="false">♥</button>
             <button id="previousButton" title="Previous">◀◀</button>
@@ -100,8 +104,19 @@
 
         <aside class="queue-panel">
           <div class="queue-heading"><div><p class="eyebrow">UP NEXT</p><h2>Mix-Tape</h2></div><span id="trackCount">0 TRACKS</span></div>
+          <div class="mix-actions"><button id="saveMixPlaylistButton" disabled title="Save all Mix-Tape tracks in their current order">SAVE PLAYLIST</button><button id="clearMixButton" disabled title="Clear upcoming tracks and keep the current song">CLEAR</button></div>
+          <p id="playlistStatus" class="playlist-status" role="status" hidden></p>
+          <div id="queueScroll" class="queue-scroll">
+          <section id="historySection" class="history-section" aria-label="Listening history" hidden>
+            <p class="queue-divider">HISTORY · THIS SESSION</p>
+            <ol id="historyList" class="history-list"></ol>
+          </section>
+          <div id="upcomingSection" class="upcoming-section">
+          <div id="upcomingBoundary"><p id="queueCurrent" class="queue-current" hidden></p><p class="queue-divider">UP NEXT</p></div>
           <div id="emptyState" class="empty-state"><div class="empty-reel">✣</div><p>No tapes yet.</p><small>Open a folder containing MP3, FLAC, M4A, WAV or OGG files.</small></div>
           <ol id="queue" class="queue"></ol>
+          </div>
+          </div>
           <nav id="pagination" class="pagination" aria-label="Mix-Tape pages" hidden>
             <button id="previousPage" title="Previous page">←</button>
             <span id="pageLabel">01 / 01</span>
@@ -112,6 +127,7 @@
       <footer><span>● BATTERY</span><span id="folderName">NO TAPE INSERTED</span><span>AUTO REVERSE</span></footer>
     </main>
     <audio id="audio"></audio>
+    <script src="../shared/listening-queue.js"></script>
     <script type="module" src="controllers/app-controller.js"></script>
   </body>
 </html>

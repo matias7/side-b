@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('retroPlayer', {
   scanLibrary: (directory) => ipcRenderer.invoke('library:scan', directory),
   loadLibraryTree: (directory) => ipcRenderer.invoke('library:tree', directory),
   loadFolder: (directory) => ipcRenderer.invoke('library:load-folder', directory),
+  savePlaylist: (payload) => ipcRenderer.invoke('playlists:save', payload),
   listPlaylists: () => ipcRenderer.invoke('playlists:list'),
   loadPlaylistTracks: (playlistId) => ipcRenderer.invoke('playlists:tracks', playlistId),
   importAppleMusicPlaylists: () => ipcRenderer.invoke('playlists:import-apple-music'),

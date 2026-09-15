@@ -53,9 +53,7 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 - [x] Registrar la reacción a cada recomendación para retroalimentar el perfil sin interpretar la reproducción automática como gusto explícito.
 - [x] Reemplazar el antiguo botón Shuffle de la botonera por un botón Like con estado visual.
 - [x] Persistir localmente el Like como señal explícita, registrar `liked` / `unliked` y permitir deshacerlo.
-- [ ] Definir si Shuffle debe terminar, repetir indefinidamente o mantener un historial sin repeticiones.
-- [ ] Guardar y restaurar el Mix-Tape actual al reiniciar Side B.
-- [ ] Guardar posición de reproducción y canción actual entre sesiones.
+- [x] Consumir la cola pendiente y finalizar Shuffle al agotarla, con historial temporal de escuchas accesible al subir desde NOW PLAYING.
 - [ ] Evaluar ReplayGain o normalización de volumen entre canciones.
 - [ ] Agregar configuración para duración e intensidad de Smart Fade.
 - [ ] Mejorar Smart Fade con análisis de BPM, beat grid y puntos musicales de entrada/salida.
@@ -63,11 +61,13 @@ Lista viva de errores, mejoras e ideas para próximas sesiones.
 
 ## Playlists / Tapes
 
-- [ ] Crear playlists manualmente desde Side B.
-- [ ] Renombrar playlists.
-- [ ] Añadir y quitar canciones de una playlist.
-- [ ] Reordenar canciones dentro de una playlist y persistir el orden.
-- [ ] Crear playlists desde el Mix-Tape actual.
+- [x] Limpiar las próximas canciones del Mix-Tape conservando la canción actual y cancelando Smart Fade; ocultar acciones en Radio.
+
+- [x] Crear playlists manualmente desde Side B.
+- [x] Renombrar playlists.
+- [x] Añadir y quitar canciones de una playlist.
+- [x] Reordenar canciones dentro de una playlist y persistir el orden.
+- [x] Crear playlists desde el Mix-Tape actual.
 - [ ] Exportar playlists de Side B.
 - [ ] Evaluar carpetas o agrupaciones de playlists.
 - [ ] Mantener las Smart Playlists de Apple Music fuera de la importación hasta definir su comportamiento.

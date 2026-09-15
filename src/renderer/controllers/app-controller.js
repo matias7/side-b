@@ -1,5 +1,7 @@
+import { createHistoryView } from '../views/history-view.js';
+import { createPlaylistController } from './playlist-controller.js';
 import { createCassetteView } from '../views/cassette-view.js';
-import { chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../models/playback-policy.js';
+import { clearUpcomingTracks, chooseNextTrackIndex, insertTrack, moveTrack, replaceTrack } from '../models/playback-policy.js';
 import { createTelemetryController } from './telemetry-controller.js';
 
 const audio = document.querySelector('#audio');
@@ -10,6 +12,7 @@ const els = Object.fromEntries([...document.querySelectorAll('[id]')].map((el) =
 
 let tracks = [];
 let currentIndex = -1;
+let listeningHistory = [];
 let playbackMode = 'off';
 let repeat = false;
 let nativeState = { playing: false, currentTime: 0, duration: 0 };
@@ -49,6 +52,7 @@ function playbackPosition() {
 function syncPlaybackSession() {
   window.retroPlayer.savePlaybackSession({
     tracks,
+    history: listeningHistory,
     currentIndex,
     currentPage,
     queuedNextIndex,
@@ -87,6 +91,8 @@ function nowPlayingMetadata(track, index) {
 function syncPlaybackControls() {
   const disabled = tracks.length === 0;
   [
+    els.saveMixPlaylistButton,
+    els.clearMixButton,
     els.likeButton,
     els.previousButton,
     els.stopButton,
@@ -98,15 +104,36 @@ function syncPlaybackControls() {
   ].forEach((control) => { control.disabled = disabled; });
   document.querySelector('.smart-toggle').classList.toggle('disabled', disabled);
   els.radioModeButton.disabled = disabled;
-  els.previousButton.disabled = disabled || playbackMode === 'radio';
+  els.previousButton.disabled = listeningHistory.length === 0;
+  els.nextButton.disabled = chooseNextIndex() < 0;
+  els.clearMixButton.disabled = tracks.length <= (currentTrack() ? 1 : 0);
 }
 
 function chooseNextIndex() {
-  if (playbackMode === 'radio') return tracks.length > 1 ? tracks.findIndex((_, index) => index !== currentIndex) : currentIndex;
-  return chooseNextTrackIndex({ trackCount: tracks.length, currentIndex, shuffle: playbackMode === 'shuffle' });
+  return window.SideBListeningQueue.nextIndex(tracks, currentIndex, playbackMode === 'shuffle');
+}
+
+function consumeTrack(index) {
+  const selected = window.SideBListeningQueue.select({ tracks, currentIndex, history: listeningHistory, playbackHasStarted }, index);
+  if (!selected) return false;
+  tracks = selected.tracks;
+  currentIndex = selected.currentIndex;
+  listeningHistory = selected.history;
+  currentPage = 0;
+  queuedNextIndex = -1;
+  return true;
+}
+
+function playHistoryTrack(track) {
+  if (!track) return;
+  recordPlaybackEvent('skipped', { reason: 'history_selection', playbackStarted: playbackHasStarted });
+  tracks.push(track);
+  loadTrack(tracks.length - 1, true, 'history_selection');
 }
 
 function paintPlaybackMode() {
+  document.querySelector('.mix-actions').hidden = playbackMode === 'radio';
+  els.playlistStatus.hidden = true;
   [['off', els.offModeButton], ['shuffle', els.shuffleModeButton], ['radio', els.radioModeButton]]
     .forEach(([mode, button]) => {
       const active = playbackMode === mode;
@@ -132,7 +159,7 @@ async function setPlaybackMode(mode) {
     rejectedRadioPaths.clear();
     renderQueue();
     await requestRadioRecommendation();
-  } else prepareUpcomingTrack();
+  } else { renderQueue(); prepareUpcomingTrack(); }
   syncPlaybackSession();
 }
 
@@ -173,8 +200,8 @@ async function rateRadioRecommendation(candidate, vote) {
 
 function prepareUpcomingTrack() {
   const current = currentTrack();
-  if (!smartFadeEnabled || !current?.nativePlayback || tracks.length < 2) return;
   queuedNextIndex = chooseNextIndex();
+  if (repeat || !smartFadeEnabled || !current?.nativePlayback || queuedNextIndex < 0) return;
   const next = tracks[queuedNextIndex];
   if (next?.nativePlayback) {
     window.retroPlayer.prepareSmartFade(
@@ -189,6 +216,15 @@ const { formatTime, updateTapeProgress, applyCoverPalette } = createCassetteView
   mediaObject: els.mediaObject
 });
 
+const historyView = createHistoryView({
+  scroll: els.queueScroll,
+  section: els.historySection,
+  list: els.historyList,
+  boundary: els.upcomingSection,
+  currentLabel: els.queueCurrent,
+  onPlay: playHistoryTrack
+});
+
 function paintTrack(track) {
   els.tapeAlbum.textContent = track.album;
   els.tapeTitle.textContent = track.title;
@@ -200,29 +236,20 @@ function paintTrack(track) {
   els.likeButton.classList.toggle('active', liked);
   els.likeButton.setAttribute('aria-pressed', String(liked));
   updateTapeProgress(0);
-  const pageStart = currentPage * PAGE_SIZE;
-  [...queue.children].forEach((li, i) => li.classList.toggle('active', pageStart + i === currentIndex));
+
   document.title = `${track.title} — Side B`;
 }
 
 function loadTrack(index, autoplay = true, reason = 'loaded') {
   if (!tracks.length) return;
   cassette.classList.remove('mixing');
-  const targetIndex = (index + tracks.length) % tracks.length;
-  const selectedTrack = tracks[targetIndex];
-  const radioAdvance = playbackMode === 'radio' && targetIndex !== currentIndex;
-  if (radioAdvance) {
-    tracks = [selectedTrack];
-    currentIndex = 0;
-    currentPage = 0;
-    queuedNextIndex = -1;
-    renderQueue();
-  } else currentIndex = targetIndex;
-  const trackPage = Math.floor(currentIndex / PAGE_SIZE);
-  if (trackPage !== currentPage) {
-    currentPage = trackPage;
-    renderQueue();
-  }
+  if (!tracks[index]) return;
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  const radioAdvance = playbackMode === 'radio' && reason !== 'history_selection';
+  radioRequestId += 1;
+  if (!consumeTrack(index)) return;
+  if (radioAdvance) tracks = [currentTrack()];
+  renderQueue();
   const track = tracks[currentIndex];
   playbackId = crypto.randomUUID();
   playbackHasStarted = autoplay;
@@ -234,6 +261,8 @@ function loadTrack(index, autoplay = true, reason = 'loaded') {
       metadata: nowPlayingMetadata(track, currentIndex),
     });
   } else {
+    window.retroPlayer.nativeAudioCommand('stop');
+    window.retroPlayer.nativeAudioCommand('clearNowPlaying');
     audio.src = track.url;
   }
   paintTrack(track);
@@ -257,9 +286,8 @@ function clearDropMarkers() {
 
 function reorderTrack(fromIndex, insertionIndex) {
   if (fromIndex < 0 || fromIndex >= tracks.length) return;
-  const playingId = currentTrack()?.id;
-  tracks = moveTrack(tracks, fromIndex, insertionIndex);
-  if (playingId) currentIndex = tracks.findIndex((track) => track.id === playingId);
+  if (fromIndex === currentIndex) return;
+  tracks = moveTrack(tracks, fromIndex, Math.max(currentIndex + 1, insertionIndex));
   queuedNextIndex = -1;
   window.retroPlayer.nativeAudioCommand('cancelNext');
   renderQueue();
@@ -269,7 +297,7 @@ function reorderTrack(fromIndex, insertionIndex) {
 
 function addLibraryTrack(track, insertionIndex = tracks.length) {
   if (!track?.path) return;
-  const destination = Math.max(0, Math.min(tracks.length, insertionIndex));
+  const destination = Math.max(currentIndex + 1, Math.min(tracks.length, insertionIndex));
   const wasEmpty = tracks.length === 0;
   tracks = insertTrack(tracks, track, destination);
   if (!wasEmpty && destination <= currentIndex) currentIndex += 1;
@@ -286,34 +314,9 @@ function addLibraryTrack(track, insertionIndex = tracks.length) {
 
 function replaceCurrentTrack(track) {
   if (!track?.path) return;
-  if (!tracks.length || currentIndex < 0) {
-    tracks = [track];
-    currentIndex = -1;
-    currentPage = 0;
-    renderQueue();
-    loadTrack(0, true, 'library_double_click');
-    return;
-  }
-  recordPlaybackEvent('skipped', { reason: 'library_double_click', replacementPath: track.path, playbackStarted: playbackHasStarted });
-  if (playbackMode === 'radio') {
-    radioRequestId += 1;
-    rejectedRadioPaths.clear();
-    tracks = [track];
-    currentIndex = -1;
-    currentPage = 0;
-    queuedNextIndex = -1;
-    window.retroPlayer.nativeAudioCommand('cancelNext');
-    renderQueue();
-    recordPlaybackEvent('manual_selection', { reason: 'library_double_click', targetIndex: 0 }, track, { position: 0 });
-    loadTrack(0, true, 'library_double_click');
-    return;
-  }
-  tracks = replaceTrack(tracks, currentIndex, track);
-  queuedNextIndex = -1;
-  window.retroPlayer.nativeAudioCommand('cancelNext');
-  renderQueue();
-  recordPlaybackEvent('manual_selection', { reason: 'library_double_click', targetIndex: currentIndex }, track, { position: 0 });
-  loadTrack(currentIndex, true, 'library_double_click');
+  recordPlaybackEvent('skipped', { reason: 'library_double_click', playbackStarted: playbackHasStarted });
+  tracks.push(track);
+  loadTrack(tracks.length - 1, true, 'library_double_click');
 }
 
 function libraryTrackFromDrag() {
@@ -382,9 +385,7 @@ queuePanel.addEventListener('drop', (event) => {
 
 function renderQueue() {
   queue.innerHTML = '';
-  const radioEntries = playbackMode === 'radio'
-    ? tracks.map((track, index) => ({ track, index })).filter((entry) => entry.index !== currentIndex)
-    : null;
+  const radioEntries = tracks.map((track, index) => ({ track, index })).filter((entry) => entry.index !== currentIndex);
   const visibleCount = radioEntries ? radioEntries.length : tracks.length;
   const pageCount = Math.max(1, Math.ceil(visibleCount / PAGE_SIZE));
   currentPage = Math.min(currentPage, pageCount - 1);
@@ -425,11 +426,16 @@ function renderQueue() {
   els.pageLabel.textContent = `${String(currentPage + 1).padStart(2, '0')} / ${String(pageCount).padStart(2, '0')}`;
   els.previousPage.disabled = currentPage === 0;
   els.nextPage.disabled = currentPage >= pageCount - 1;
-  queue.scrollTop = 0;
+  historyView.render(listeningHistory, currentTrack());
   syncPlaybackControls();
 }
 
 function applyLibrary(library) {
+  if (currentTrack() && playbackHasStarted) listeningHistory.push(currentTrack());
+  playbackHasStarted = false;
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  window.retroPlayer.nativeAudioCommand('stop');
+  audio.pause();
   tracks = library.tracks;
   currentIndex = -1;
   currentPage = 0;
@@ -442,7 +448,8 @@ function applyLibrary(library) {
 }
 
 function restorePlaybackSession(session) {
-  if (!session?.tracks?.length) return false;
+  listeningHistory = session?.history || [];
+  if (!session?.tracks?.length) { renderQueue(); return false; }
   tracks = session.tracks;
   currentIndex = Math.max(0, Math.min(tracks.length - 1, Number(session.currentIndex) || 0));
   currentPage = Math.max(0, Number(session.currentPage) || Math.floor(currentIndex / PAGE_SIZE));
@@ -541,6 +548,7 @@ function selectTapeGroup(label, groupTracks, row, playlistId = null) {
   selectedTapeGroup = { label, tracks: groupTracks, sourceType: playlistId ? 'playlist' : 'tapes' };
   selectedPlaylistId = playlistId;
   els.deletePlaylistButton.disabled = !playlistId;
+  els.editPlaylistButton.disabled = !playlistId || tapePlaylists.find((item) => item.id === playlistId)?.source !== 'local';
   els.tapesTree.querySelectorAll('.tape-row.selected').forEach((item) => item.classList.remove('selected'));
   row.classList.add('selected');
   els.loadFolderButton.disabled = groupTracks.length === 0;
@@ -553,6 +561,7 @@ function createPlaylistRow(playlist) {
     selectedRow.classList.remove('loading');
     selectTapeGroup(playlist.name, playlistTracks, selectedRow, playlist.id);
   });
+  row.dataset.playlistId = playlist.id;
   row.querySelector('.folder-count').textContent = playlist.trackCount;
   return row;
 }
@@ -568,7 +577,7 @@ function createPlaylistsCategory(playlists) {
 
 async function loadPlaylists() {
   tapePlaylists = await window.retroPlayer.listPlaylists();
-  if (activeLibraryTab === 'tapes' && tapeLibraryTracks.length) renderTapesTree();
+  if (activeLibraryTab === 'tapes') renderTapesTree();
 }
 
 function createTapeSelectionRow(label, groupTracks, detail = '', selectionHandler = null) {
@@ -742,7 +751,7 @@ function filterFiles(query) {
 
 async function loadTapeIndex() {
   if (!libraryTree) {
-    els.tapesTree.innerHTML = '<p class="tapes-loading">SELECT A MEDIA LIBRARY FIRST</p>';
+    renderTapesTree();
     els.loadFolderButton.disabled = true;
     return;
   }
@@ -789,7 +798,7 @@ els.previousPage.addEventListener('click', () => {
   if (currentPage > 0) { currentPage -= 1; renderQueue(); syncPlaybackSession(); }
 });
 els.nextPage.addEventListener('click', () => {
-  if ((currentPage + 1) * PAGE_SIZE < tracks.length) { currentPage += 1; renderQueue(); syncPlaybackSession(); }
+  if ((currentPage + 1) * PAGE_SIZE < tracks.length - (currentTrack() ? 1 : 0)) { currentPage += 1; renderQueue(); syncPlaybackSession(); }
 });
 els.filesTab.addEventListener('click', () => switchLibraryTab('files'));
 els.tapesTab.addEventListener('click', () => switchLibraryTab('tapes'));
@@ -808,6 +817,64 @@ els.scanLibraryButton.addEventListener('click', async () => {
     els.scanLibraryButton.disabled = !libraryTree;
   }
 });
+
+function showPlaylistStatus(message) {
+  els.playlistStatus.textContent = message;
+  els.playlistStatus.hidden = false;
+}
+
+const playlistEditor = createPlaylistController({
+  api: window.retroPlayer,
+  getLibraryTracks: async () => {
+    if (!libraryTree) return [];
+    const library = await window.retroPlayer.loadIndexedLibrary(libraryTree.path);
+    return library?.tracks || [];
+  },
+  onSaved: async (playlist) => {
+    await loadPlaylists();
+    switchLibraryTab('tapes');
+    await loadTapeIndex();
+    const row = els.tapesTree.querySelector(`[data-playlist-id="${playlist.id}"]`);
+    if (row) {
+      row.parentElement.hidden = false;
+      const header = row.parentElement.parentElement.querySelector(':scope > .tape-row');
+      const toggle = header?.querySelector('button');
+      if (toggle) toggle.textContent = '▾';
+      selectTapeGroup(playlist.name, await window.retroPlayer.loadPlaylistTracks(playlist.id), row, playlist.id);
+      row.scrollIntoView({ block: 'nearest' });
+    }
+    showPlaylistStatus(`Saved “${playlist.name}” · ${playlist.trackCount} tracks`);
+  },
+  onError: (error) => showPlaylistStatus(`Could not save playlist: ${error.message}`)
+});
+
+els.newPlaylistButton.addEventListener('click', () => playlistEditor.open());
+els.saveMixPlaylistButton.addEventListener('click', () => {
+  if (playbackMode !== 'radio' && tracks.length) playlistEditor.open({ tracks: tracks.slice(), name: (mixSource.type === 'folder' ? mixSource.name?.split(/[\\/]/).filter(Boolean).pop() : mixSource.name) || 'My Mix-Tape' });
+});
+els.editPlaylistButton.addEventListener('click', () => {
+  const playlist = tapePlaylists.find((item) => item.id === selectedPlaylistId);
+  if (playlist?.source === 'local' && selectedTapeGroup) playlistEditor.open({ playlist, tracks: selectedTapeGroup.tracks });
+});
+
+function clearMixTape() {
+  if (playbackMode === 'radio') return;
+  const cleared = clearUpcomingTracks(tracks, currentIndex);
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  tracks = cleared.tracks;
+  currentIndex = cleared.currentIndex;
+  currentPage = 0;
+  queuedNextIndex = -1;
+  draggedTrackIndex = -1;
+  draggedLibraryTrackPath = null;
+  cassette.classList.remove('mixing');
+  queue.classList.remove('library-drop-target');
+  renderQueue();
+  syncPlaybackSession();
+  showPlaylistStatus('Upcoming tracks cleared.');
+}
+
+els.clearMixButton.addEventListener('click', clearMixTape);
 
 els.addPlaylistButton.addEventListener('click', async () => {
   els.addPlaylistButton.disabled = true;
@@ -837,6 +904,8 @@ els.deletePlaylistButton.addEventListener('click', async () => {
     selectedPlaylistId = null;
     selectedTapeGroup = null;
     els.deletePlaylistButton.disabled = true;
+    els.editPlaylistButton.disabled = true;
+    els.loadFolderButton.disabled = true;
     await loadPlaylists();
   }
 });
@@ -857,7 +926,7 @@ els.libraryButton.addEventListener('click', async () => {
 els.loadFolderButton.addEventListener('click', async () => {
   if (activeLibraryTab === 'tapes') {
     if (!selectedTapeGroup) return;
-    applyLibrary({ directory: libraryTree.path, label: selectedTapeGroup.label, sourceType: selectedTapeGroup.sourceType, tracks: selectedTapeGroup.tracks.slice() });
+    applyLibrary({ directory: libraryTree?.path || '', label: selectedTapeGroup.label, sourceType: selectedTapeGroup.sourceType, tracks: selectedTapeGroup.tracks.slice() });
     return;
   }
   if (!selectedFolder) return;
@@ -887,6 +956,7 @@ els.playButton.addEventListener('click', () => {
     recordPlaybackEvent('paused', { reason: 'transport' });
     audio.pause();
   }
+  syncPlaybackSession();
 });
 els.stopButton.addEventListener('click', () => {
   recordPlaybackEvent('stopped', { reason: 'transport' });
@@ -899,12 +969,11 @@ els.stopButton.addEventListener('click', () => {
   updateTapeProgress(0);
 });
 els.previousButton.addEventListener('click', () => {
-  recordPlaybackEvent('skipped', { reason: 'previous', playbackStarted: playbackHasStarted });
-  loadTrack(currentIndex - 1, true, 'previous');
+  playHistoryTrack(listeningHistory.at(-1));
 });
 els.nextButton.addEventListener('click', () => {
   recordPlaybackEvent('skipped', { reason: 'next', playbackStarted: playbackHasStarted });
-  loadTrack(chooseNextIndex(), true, 'next');
+  loadTrack(queuedNextIndex >= 0 ? queuedNextIndex : chooseNextIndex(), true, 'next');
 });
 els.likeButton.addEventListener('click', () => {
   const track = currentTrack();
@@ -923,6 +992,9 @@ els.repeatButton.addEventListener('click', () => {
   repeat = !repeat;
   els.repeatButton.classList.toggle('active', repeat);
   recordPlaybackEvent('repeat_changed', { enabled: repeat });
+  window.retroPlayer.nativeAudioCommand('cancelNext');
+  queuedNextIndex = -1;
+  prepareUpcomingTrack();
   syncPlaybackSession();
 });
 els.volume.addEventListener('input', async () => {
@@ -965,13 +1037,14 @@ audio.addEventListener('timeupdate', () => {
 });
 audio.addEventListener('loadedmetadata', () => { els.duration.textContent = formatTime(audio.duration); });
 audio.addEventListener('ended', () => {
+  if (!currentTrack() || currentTrack().nativePlayback) return;
   recordPlaybackEvent('play_completed');
   if (repeat) {
     recordPlaybackEvent('repeat_started');
-    audio.currentTime = 0;
-    audio.play();
+    loadTrack(currentIndex, true, 'repeat');
   } else {
-    const nextIndex = chooseNextIndex();
+    const nextIndex = queuedNextIndex >= 0 ? queuedNextIndex : chooseNextIndex();
+    if (nextIndex < 0) return;
     recordPlaybackEvent('auto_advanced', { targetIndex: nextIndex });
     loadTrack(nextIndex, true, 'auto_advance');
   }
@@ -1030,6 +1103,7 @@ setInterval(syncSystemVolume, 1000);
 
 window.retroPlayer.onNativeAudioState((state) => {
   if (state.event === 'error') return console.error('Motor de audio:', state.message);
+  if (!currentTrack()?.nativePlayback) return;
   if (state.event === 'remoteCommand') {
     if (state.command === 'next') els.nextButton.click();
     else if (state.command === 'previous') els.previousButton.click();
@@ -1051,15 +1125,9 @@ window.retroPlayer.onNativeAudioState((state) => {
     recordPlaybackEvent('play_completed', { via: 'smart_fade' }, outgoingTrack);
     recordPlaybackEvent('crossfade_completed', { targetIndex: queuedNextIndex }, outgoingTrack);
     cassette.classList.remove('mixing');
-    currentIndex = queuedNextIndex;
-    const transitionedTrack = currentTrack();
-    if (playbackMode === 'radio' && transitionedTrack) {
-      tracks = [transitionedTrack];
-      currentIndex = 0;
-      currentPage = 0;
-      queuedNextIndex = -1;
-      renderQueue();
-    }
+    if (!consumeTrack(queuedNextIndex)) return;
+    if (playbackMode === 'radio') tracks = [currentTrack()];
+    renderQueue();
     playbackId = crypto.randomUUID();
     playbackHasStarted = true;
     const trackPage = Math.floor(currentIndex / PAGE_SIZE);
@@ -1077,10 +1145,10 @@ window.retroPlayer.onNativeAudioState((state) => {
     recordPlaybackEvent('play_completed');
     if (repeat) {
       recordPlaybackEvent('repeat_started');
-      window.retroPlayer.nativeAudioCommand('seek', { time: 0 });
-      window.retroPlayer.nativeAudioCommand('play');
+      loadTrack(currentIndex, true, 'repeat');
     } else {
       const nextIndex = queuedNextIndex >= 0 ? queuedNextIndex : chooseNextIndex();
+      if (nextIndex < 0) return;
       recordPlaybackEvent('auto_advanced', { targetIndex: nextIndex });
       loadTrack(nextIndex, true, 'auto_advance');
     }

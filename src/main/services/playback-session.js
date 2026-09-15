@@ -1,3 +1,4 @@
+const listeningQueue = require('../../shared/listening-queue');
 const { randomUUID } = require('node:crypto');
 
 function createPlaybackSession() {
@@ -9,6 +10,7 @@ function createPlaybackSession() {
     const queuedNextIndex = Number(payload.queuedNextIndex);
     state = {
       tracks: payload.tracks,
+      history: Array.isArray(payload.history) ? payload.history : [],
       currentIndex: Number.isInteger(currentIndex) ? currentIndex : -1,
       currentPage: Math.max(0, Number(payload.currentPage) || 0),
       queuedNextIndex: Number.isInteger(queuedNextIndex) ? queuedNextIndex : -1,
@@ -28,8 +30,8 @@ function createPlaybackSession() {
   function handleNativeState(nativeState) {
     if (!state || nativeState?.event !== 'transitioned') return;
     if (state.queuedNextIndex >= 0 && state.queuedNextIndex < state.tracks.length) {
-      state.currentIndex = state.queuedNextIndex;
-      state.currentPage = Math.floor(state.currentIndex / 50);
+      Object.assign(state, listeningQueue.select(state, state.queuedNextIndex));
+      state.currentPage = 0;
       state.queuedNextIndex = -1;
       state.playbackId = randomUUID();
       state.playbackHasStarted = true;

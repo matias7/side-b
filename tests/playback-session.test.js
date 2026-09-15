@@ -42,9 +42,26 @@ describe('playback window session', () => {
     session.update(baseState);
     session.handleNativeState({ event: 'transitioned' });
     const restored = session.snapshot();
-    expect(restored.currentIndex).toBe(2);
+    expect(restored.currentIndex).toBe(0);
+    expect(restored.tracks).toEqual([{ id: 'c' }, { id: 'a' }]);
+    expect(restored.history).toEqual([{ id: 'b' }]);
     expect(restored.queuedNextIndex).toBe(-1);
     expect(restored.playbackId).not.toBe('playback-1');
+  });
+
+  it('keeps a cleared queue empty after a late transition event', () => {
+    const session = createPlaybackSession();
+    session.update(baseState);
+    session.update({ tracks: [], currentIndex: -1, queuedNextIndex: -1 });
+    session.handleNativeState({ event: 'transitioned' });
+    expect(session.snapshot()).toMatchObject({ tracks: [], currentIndex: -1, queuedNextIndex: -1 });
+  });
+
+  it('keeps history in the running session only', () => {
+    const session = createPlaybackSession();
+    session.update({ ...baseState, history: [{ id: 'heard' }] });
+    expect(session.snapshot().history).toEqual([{ id: 'heard' }]);
+    expect(createPlaybackSession().snapshot()).toBeNull();
   });
 
   it('rejects malformed updates', () => {
