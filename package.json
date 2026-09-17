@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "music-metadata": "^11.8.3",
-    "plist": "^3.1.0"
+    "plist": "^5.0.0"
   },
   "devDependencies": {
     "electron": "^44.4.1",
