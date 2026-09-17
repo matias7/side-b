@@ -1,13 +1,21 @@
 {
   "name": "side-b",
   "productName": "Side B",
-  "version": "0.5.1",
+  "version": "0.5.2",
   "private": true,
   "license": "GPL-3.0-only",
   "engines": {
     "node": ">=24 <25"
   },
   "description": "A local music player inspired by classic cassette Walkmans.",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matias7/side-b.git"
+  },
+  "bugs": {
+    "url": "https://github.com/matias7/side-b/issues"
+  },
+  "homepage": "https://github.com/matias7/side-b#readme",
   "main": "src/main/index.js",
   "scripts": {
     "build:native": "node scripts/build-native.js",
