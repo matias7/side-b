@@ -1,6 +1,8 @@
 # Side B
 
-Side B is a local music player for macOS and an experimental Windows build built with Electron and inspired by cassette Walkmans. Album artwork becomes a physical-looking J-card and drives the cassette label palette while the reels and tape reflect playback progress.
+Side B is a local music player built with Electron and inspired by cassette Walkmans. It targets macOS on Apple Silicon, with experimental Windows support. Album artwork becomes a physical-looking J-card and drives the cassette label palette while the reels and tape reflect playback progress.
+
+Licensed under [GPL-3.0-only](LICENSE). Side B is a beta: Windows packaging and playback still require validation on Windows hardware.
 
 The application is local-first: music, playlists, library indexes and listening history stay on the user's computer.
 
@@ -15,7 +17,7 @@ The application is local-first: music, playlists, library indexes and listening 
 - Local playlists: create, rename, add/remove songs and persist their order.
 - Local personalized Radio that uses listening history, Apple Music statistics, Likes, skips and artist/album/genre context to keep one next recommendation ready.
 - Individual-song drag and drop from Tapes, plus double-click replacement of the currently inserted song.
-- OFF/Shuffle playback modes and persistent explicit Likes, with the future Radio position reserved in the interface.
+- OFF, Shuffle and Radio playback modes, plus explicit Likes.
 - Smart Fade with silence detection, level matching and transition events.
 - macOS Now Playing integration, media keys and system-volume control.
 - Light and Night themes, Compact mode, always-on-top mode and adaptive cassette colors.
@@ -23,15 +25,20 @@ The application is local-first: music, playlists, library indexes and listening 
 
 ## Requirements
 
-- macOS on Apple Silicon.
-- Node.js and npm.
-- Xcode Command Line Tools for compiling the native audio helper.
-- FFmpeg installed at `/opt/homebrew/bin/ffmpeg` for Smart Fade analysis and non-native fallback processing.
+- Node.js 24 and npm for development (`.nvmrc` records the supported major).
+- macOS 13 or newer on Apple Silicon, plus Xcode Command Line Tools to compile the native helpers.
+- FFmpeg for Smart Fade analysis and Windows ALAC fallback. Set `SIDE_B_FFMPEG_PATH` to an executable, install it on PATH, or use Homebrew's default location on macOS.
+
+| Platform | Status | Playback |
+| --- | --- | --- |
+| macOS 13+ / Apple Silicon | Primary development and DMG target | Electron audio plus native ALAC, Smart Fade and macOS integrations |
+| Windows / x64 | Experimental; hardware and installer validation pending | Electron audio, external FFmpeg for ALAC, application volume |
+| Linux / Intel macOS | No supported release target yet | Passing unit tests alone does not imply supported playback |
 
 ## Development
 
 ```bash
-npm install
+npm ci
 npm start
 ```
 
@@ -61,7 +68,9 @@ Release DMGs are built only from the `stable` branch after the approved `experim
 npm run dist:mac
 ```
 
-The unsigned ARM64 DMG is written to `dist/`. Signing and notarization are not configured yet.
+The ARM64 DMG is written to `dist/`. electron-builder may discover a local signing identity automatically; the latest locally built release used an Apple Development certificate. Developer ID distribution signing and notarization are not configured as a reproducible public release process. See [the public-release checklist](docs/PUBLIC_RELEASE.md).
+
+For an unsigned local test build, set `CSC_IDENTITY_AUTO_DISCOVERY=false` before running the build. GitHub CI checks syntax, tests and native compilation without signing or publishing releases.
 
 ## Architecture
 
@@ -77,6 +86,7 @@ src/
 │   ├── models/                  Shared domain representations
 │   └── services/                Library, audio and import operations
 ├── preload.js                   Restricted IPC bridge
+├── shared/                      Pure queue rules shared across processes
 └── renderer/
     ├── index.html               View structure
     ├── controllers/             UI orchestration and event handling
@@ -85,12 +95,15 @@ src/
     └── styles/                  Visual system and component styles
 
 native/
-└── AudioEngine.m                Native macOS playback and MediaPlayer bridge
+├── AudioEngine.m                Native macOS playback and MediaPlayer bridge
+└── HapticEngine.m               Native macOS trackpad feedback
 ```
 
 The renderer never imports Node.js modules or accesses the filesystem directly. Privileged work is requested through the narrow API exposed by `preload.js` and implemented by IPC handlers in the main process.
 
 See [GUIDELINES.md](GUIDELINES.md) before adding features, [CHANGELOG.md](CHANGELOG.md) for release history and [TODO.md](TODO.md) for the current roadmap.
+
+For contributions, start with [CONTRIBUTING.md](CONTRIBUTING.md). Report security concerns using [SECURITY.md](SECURITY.md). Third-party licensing notes are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 ## Project status
 
@@ -98,7 +111,7 @@ Side B is a functional beta. It is intended for local use while playback behavio
 
 ## Windows (experimental)
 
-On Windows x64, install Node.js/npm, then run `npm install` and `npm start`.
+On Windows x64, install Node.js 24/npm, then run `npm ci` and `npm start`.
 No Xcode or macOS native helpers are required. Run `npm run dist:win` on Windows
 from the approved clean stable branch to produce an NSIS installer in `dist/`.
 Windows packaging and playback still need validation on a Windows machine.

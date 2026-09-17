@@ -20,7 +20,7 @@ describe('native haptics service', () => {
   it('resolves development and packaged helper paths', () => {
     expect(resolveHapticsPath({ isPackaged: false })).toBe(path.resolve('build/retro-haptics'));
     expect(resolveHapticsPath({ isPackaged: true }, '/App/Resources'))
-      .toBe('/App/Resources/app.asar.unpacked/build/retro-haptics');
+      .toBe(path.join('/App/Resources', 'app.asar.unpacked', 'build', 'retro-haptics'));
   });
 
   it('starts lazily and sends validated patterns to the helper', () => {

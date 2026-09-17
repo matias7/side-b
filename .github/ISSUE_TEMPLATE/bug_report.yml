@@ -1,0 +1,30 @@
+name: Bug report
+description: Report a reproducible problem in Side B.
+body:
+  - type: markdown
+    attributes:
+      value: "For security vulnerabilities, read SECURITY.md first. Do not attach your database, music, Apple Music XML, or unredacted personal paths."
+  - type: input
+    id: version
+    attributes:
+      label: Side B version or commit
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and architecture
+      placeholder: macOS / Apple Silicon, or Windows / x64
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps, expected behavior, and actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: playback
+    attributes:
+      label: Playback details and sanitized logs
+      description: Include format/codec, Radio or Shuffle, Smart Fade, and whether this is an installed build or development run.

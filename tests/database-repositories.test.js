@@ -80,7 +80,7 @@ describe('SQLite repositories', () => {
     expect(library.cachedTrack('/music/a.m4a').track).toMatchObject({
       id: '/music/a.m4a',
       title: 'A',
-      nativePlayback: true
+      nativePlayback: process.platform === 'darwin'
     });
   });
 

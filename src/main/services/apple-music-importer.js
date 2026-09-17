@@ -3,15 +3,13 @@ const { fileURLToPath } = require('node:url');
 const plist = require('plist');
 const { normalizedTrackKey } = require('../models/track');
 
-const EXCLUDED_PLAYLISTS = new Set(['rock 1', 'temaikenes', 'play again']);
-
 function createAppleMusicImporter(database) {
   return async function importAppleMusicPlaylists(xmlPath) {
     const document = plist.parse(await fs.readFile(xmlPath, 'utf8'));
     const xmlTracks = document.Tracks || {};
     const candidates = (document.Playlists || []).filter((playlist) =>
       !playlist.Master && !playlist.Folder && !playlist['Smart Info'] && !playlist['Smart Criteria'] &&
-      !playlist['Distinguished Kind'] && !EXCLUDED_PLAYLISTS.has(String(playlist.Name || '').trim().toLocaleLowerCase())
+      !playlist['Distinguished Kind']
     );
     const localRows = database.prepare('SELECT path, title, artist, album FROM tracks').all();
     const exactPaths = new Map(localRows.map((track) => [track.path.normalize('NFC'), track.path]));
@@ -50,9 +48,6 @@ function createAppleMusicImporter(database) {
     let statsImported = 0;
     database.exec('BEGIN IMMEDIATE');
     try {
-      for (const excludedName of EXCLUDED_PLAYLISTS) {
-        database.prepare("DELETE FROM playlists WHERE source = 'apple-music' AND lower(trim(name)) = ?").run(excludedName);
-      }
       for (const playlist of candidates) {
         const externalId = String(playlist['Playlist Persistent ID'] || playlist['Playlist ID']);
         const playlistId = upsertPlaylist.get(playlist.Name || 'Untitled Tape', externalId).id;

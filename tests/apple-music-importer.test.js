@@ -50,9 +50,9 @@ describe('Apple Music importer', () => {
     await fs.writeFile(xmlPath, xml);
 
     const result = await createAppleMusicImporter(database)(xmlPath);
-    expect(result).toMatchObject({ imported: 1, skipped: 2, statsImported: 1 });
+    expect(result).toMatchObject({ imported: 2, skipped: 1, statsImported: 1 });
     expect(result.playlists[0]).toEqual({ name: 'Favorites', total: 1, matched: 1 });
-    expect(database.prepare('SELECT name FROM playlists').all()).toEqual([{ name: 'Favorites' }]);
+    expect(database.prepare('SELECT name FROM playlists ORDER BY id').all()).toEqual([{ name: 'Favorites' }, { name: 'Rock 1' }]);
     expect(database.prepare('SELECT play_count, skip_count, loved FROM imported_track_stats').get()).toEqual({
       play_count: 7,
       skip_count: 2,

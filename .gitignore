@@ -11,6 +11,13 @@ coverage/
 *.sqlite-shm
 *.sqlite-wal
 *.db
+*.sqlite-journal
+
+# Local signing credentials
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
 
 # Environment and logs
 .env

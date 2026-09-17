@@ -6,6 +6,25 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-09-17
+
+### Added
+
+- GPL-3.0-only license, third-party notices, contributor/security documentation and a public-release preparation checklist.
+- GitHub issue and pull-request templates, three-platform CI and weekly Dependabot configuration.
+- Node.js 24 development baseline and shared editor/line-ending settings.
+
+### Changed
+
+- Upgrade Electron from 38 to 44.4.1, replacing its vulnerable `extract-zip` dependency with Electron's internal extractor; `npm audit` reports no vulnerabilities. The minimum macOS version is now 13.
+- Corrected platform, Radio, FFmpeg and signing documentation; use npm ci for contributor setup.
+- Include license notices in application packaging and compile native helpers before npm run dev.
+
+### Fixed
+
+- Remove personal playlist-name exclusions and their implicit deletion from Apple Music imports; filter only unsupported playlist types.
+- Remove macOS-only assumptions from cross-platform repository and haptics tests; syntax-check scripts and tests as well as application source.
+
 ## [0.5.0] - 2026-09-15
 
 ### Added
