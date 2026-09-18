@@ -6,6 +6,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-18
+
+### Added
+
+- Add real Mix-Tape and Radio screenshots to introduce Side B visually.
+
+### Changed
+
+- Redesign the README with a visual introduction, clearer setup instructions and platform status.
+
 ## [0.5.2] - 2026-09-17
 
 ### Changed

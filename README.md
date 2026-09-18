@@ -1,164 +1,77 @@
-# Side B
+<div align="center">
+  <img src="assets/side-b-icon.png" alt="Side B cassette icon" width="160">
+  <h1>Side B</h1>
+  <p><strong>Your music, on a new tape.</strong></p>
+  <p>A local music player that turns album artwork into a cassette, your library into a shelf of tapes, and the next songs into a Mix-Tape.</p>
+  <p>
+    <a href="https://github.com/matias7/side-b/actions/workflows/ci.yml"><img src="https://github.com/matias7/side-b/actions/workflows/ci.yml/badge.svg" alt="CI status"></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-GPL--3.0--only-F4BD38" alt="GPL-3.0-only license"></a>
+    <img src="https://img.shields.io/badge/macOS-Apple%20Silicon-272722" alt="macOS on Apple Silicon">
+    <img src="https://img.shields.io/badge/Windows-experimental-EC593A" alt="Windows experimental">
+  </p>
+</div>
 
-Side B is a local music player built with Electron and inspired by cassette Walkmans. It targets macOS on Apple Silicon, with experimental Windows support. Album artwork becomes a physical-looking J-card and drives the cassette label palette while the reels and tape reflect playback progress.
+![Side B playing a local playlist in Night mode, with its cassette and Mix-Tape queue visible](docs/images/side-b-mix-tape.jpg)
 
-Licensed under [GPL-3.0-only](LICENSE). Side B is a beta: Windows packaging and playback still require validation on Windows hardware.
+Side B gives local files the feel of a physical music collection. The cover shapes each cassette's J-card and colors; the reels move with playback. Music, playlists, library indexes and listening data stay on your computer.
 
-The application is local-first: music, playlists, library indexes and listening history stay on the user's computer.
+## The listening experience
 
-## Current features
+- **Your library, your tapes.** Scan a folder of local music, browse songs, artists and albums, and import regular playlists from an Apple Music XML export.
+- **A Mix-Tape you control.** Queue and reorder songs, save the current tape as a playlist, or clear upcoming tracks without interrupting the song playing now. Scroll above **NOW PLAYING** to revisit this session's listening history.
+- **Three ways to listen.** Play the tape in order, switch on Shuffle, or let local Radio keep a recommendation ready using your listening history and explicit Likes.
+- **The details of a real player.** Smart Fade can blend transitions; macOS adds media-key and Now Playing support, system volume and trackpad feedback. Light and Night themes, Compact mode and cassette colors change the feel of the deck.
 
-- Recursive indexing of local MP3, AAC, M4A/ALAC, WAV, OGG, FLAC and Opus files.
-- Native ALAC playback through an Objective-C `AVAudioPlayer` helper, without runtime conversion.
-- Files browser and logical Songs, Artists, Albums and Playlists views.
-- Apple Music XML import for regular playlists and aggregate listening statistics.
-- Persistent SQLite library and playback-event history.
-- Reorderable and paginated Mix-Tape queue, with Save Playlist and Clear controls.
-- Local playlists: create, rename, add/remove songs and persist their order.
-- Local personalized Radio that uses listening history, Apple Music statistics, Likes, skips and artist/album/genre context to keep one next recommendation ready.
-- Individual-song drag and drop from Tapes, plus double-click replacement of the currently inserted song.
-- OFF, Shuffle and Radio playback modes, plus explicit Likes.
-- Smart Fade with silence detection, level matching and transition events.
-- macOS Now Playing integration, media keys and system-volume control.
-- Light and Night themes, Compact mode, always-on-top mode and adaptive cassette colors.
-- Native macOS trackpad feedback for button hover and press interactions.
+![Side B in Light mode with Radio recommending the next track](docs/images/side-b-radio.jpg)
 
-## Requirements
+The screenshots show a personal music library. Its songs and album artwork are **not included** with Side B.
 
-- Node.js 24 and npm for development (`.nvmrc` records the supported major).
-- macOS 13 or newer on Apple Silicon, plus Xcode Command Line Tools to compile the native helpers.
-- FFmpeg for Smart Fade analysis and Windows ALAC fallback. Set `SIDE_B_FFMPEG_PATH` to an executable, install it on PATH, or use Homebrew's default location on macOS.
+## Get started
 
-| Platform | Status | Playback |
-| --- | --- | --- |
-| macOS 13+ / Apple Silicon | Primary development and DMG target | Electron audio plus native ALAC, Smart Fade and macOS integrations |
-| Windows / x64 | Experimental; hardware and installer validation pending | Electron audio, external FFmpeg for ALAC, application volume |
-| Linux / Intel macOS | No supported release target yet | Passing unit tests alone does not imply supported playback |
-
-## Development
+Side B is currently a beta. For development, use Node.js 24 and npm:
 
 ```bash
+git clone https://github.com/matias7/side-b.git
+cd side-b
 npm ci
 npm start
 ```
 
-`npm start` compiles `native/AudioEngine.m` and launches Electron. The existing SQLite database is stored outside the application bundle at:
+Choose a music folder in the app, open **Tapes** to browse the indexed collection, then load a selection into the Mix-Tape. Supported library formats are MP3, AAC, M4A/ALAC, WAV, OGG, FLAC and Opus.
 
-```text
-~/Library/Application Support/Side B/side-b-library.sqlite
-```
+On macOS, use macOS 13 or newer on Apple Silicon and install the Xcode Command Line Tools to build the native audio and haptic helpers. Smart Fade analysis needs an external FFmpeg executable. Set `SIDE_B_FFMPEG_PATH`, put FFmpeg on `PATH`, or use Homebrew's default macOS location. FFmpeg is not bundled.
 
-Replacing or rebuilding the application therefore does not erase the library or listening history.
+| Platform | Status | Notes |
+| --- | --- | --- |
+| macOS 13+ / Apple Silicon | Primary development target | Native ALAC playback, Smart Fade and macOS integrations |
+| Windows / x64 | Experimental | Electron audio; ALAC needs external FFmpeg; installer and playback still need hardware validation |
+| Linux / Intel macOS | No supported release target | Passing unit tests does not establish playback support |
 
-## Tests
+### Playlists and history
+
+Use **＋ PLAYLIST** to create a local playlist. You can search indexed songs, change their order, and keep repeats or an empty playlist. **SAVE PLAYLIST** copies the current song and upcoming Mix-Tape tracks into a new playlist without changing playback. **CLEAR** removes only upcoming tracks and cancels a pending Smart Fade. Both controls are hidden in Radio mode.
+
+The Mix-Tape separates **NOW PLAYING** from **UP NEXT**. Scroll upward once to reach the current song and again to reveal earlier plays. Replaying an earlier entry leaves the upcoming queue intact. This session history clears when Side B quits; listening statistics are stored separately in SQLite.
+
+### Windows notes
+
+Run `npm ci` and `npm start` on Windows x64 with Node.js 24. Windows uses Electron audio; native Smart Fade, macOS Now Playing and trackpad haptics are unavailable. For ALAC, install FFmpeg on `PATH` or point `SIDE_B_FFMPEG_PATH` at `ffmpeg.exe`. Side B converts ALAC losslessly to a temporary FLAC for playback, which may take time to load. Windows volume controls application audio.
+
+## Build and verify
 
 ```bash
-npm test
-npm run test:watch
 npm run check
+npm test
+npm run dist:mac  # macOS ARM64 DMG
+npm run dist:win  # Windows x64 NSIS installer
 ```
 
-Vitest currently covers playback sequencing, Shuffle exclusions, Mix-Tape reordering, SQLite repositories, telemetry validation and Apple Music playlist/statistics import. All database tests use isolated in-memory SQLite databases and never touch the user's real library.
+Build the installer on its target platform. Release DMGs are made from the `stable` branch after changes from `experimental` are approved and merged. Developer ID signing and notarization are not yet configured as a reproducible release process; see the [public-release checklist](docs/PUBLIC_RELEASE.md). For an unsigned local macOS build, set `CSC_IDENTITY_AUTO_DISCOVERY=false` before building. GitHub CI checks syntax, tests and native compilation on macOS, Windows and Linux without publishing installers.
 
-## Build a DMG
+Side B keeps its SQLite database in Electron's user-data directory, outside the application bundle. Replacing the app does not erase the library or listening statistics. On macOS the usual path is `~/Library/Application Support/Side B/side-b-library.sqlite`; on Windows it is normally `%APPDATA%/Side B/side-b-library.sqlite`.
 
-Release DMGs are built only from the `stable` branch after the approved `experimental` changes have been merged and validated.
+## Under the hood
 
-```bash
-npm run dist:mac
-```
+Side B uses Electron with a restricted preload API: the renderer handles presentation, while the main process owns the filesystem, SQLite and platform audio. The shared queue rules live in `src/shared/`; macOS helpers live in `native/`. See [GUIDELINES.md](GUIDELINES.md) for the architecture and development rules.
 
-The ARM64 DMG is written to `dist/`. electron-builder may discover a local signing identity automatically; the latest locally built release used an Apple Development certificate. Developer ID distribution signing and notarization are not configured as a reproducible public release process. See [the public-release checklist](docs/PUBLIC_RELEASE.md).
-
-For an unsigned local test build, set `CSC_IDENTITY_AUTO_DISCOVERY=false` before running the build. GitHub CI checks syntax, tests and native compilation without signing or publishing releases.
-
-## Architecture
-
-Side B follows an MVC-inspired desktop architecture with an explicit Electron process boundary:
-
-```text
-src/
-├── main/
-│   ├── index.js                 Application composition root
-│   ├── window.js                BrowserWindow construction
-│   ├── ipc/                     Renderer-facing use cases
-│   ├── database/                SQLite connection and repositories
-│   ├── models/                  Shared domain representations
-│   └── services/                Library, audio and import operations
-├── preload.js                   Restricted IPC bridge
-├── shared/                      Pure queue rules shared across processes
-└── renderer/
-    ├── index.html               View structure
-    ├── controllers/             UI orchestration and event handling
-    ├── models/                  Pure playback and queue policies
-    ├── views/                   Reusable presentation logic
-    └── styles/                  Visual system and component styles
-
-native/
-├── AudioEngine.m                Native macOS playback and MediaPlayer bridge
-└── HapticEngine.m               Native macOS trackpad feedback
-```
-
-The renderer never imports Node.js modules or accesses the filesystem directly. Privileged work is requested through the narrow API exposed by `preload.js` and implemented by IPC handlers in the main process.
-
-See [GUIDELINES.md](GUIDELINES.md) before adding features, [CHANGELOG.md](CHANGELOG.md) for release history and [TODO.md](TODO.md) for the current roadmap.
-
-For contributions, start with [CONTRIBUTING.md](CONTRIBUTING.md). Report security concerns using [SECURITY.md](SECURITY.md). Third-party licensing notes are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
-
-## Project status
-
-Side B is a functional beta. It is intended for local use while playback behavior, library management, recommendations and distribution are developed further.
-
-## Windows (experimental)
-
-On Windows x64, install Node.js 24/npm, then run `npm ci` and `npm start`.
-No Xcode or macOS native helpers are required. Run `npm run dist:win` on Windows
-from the approved clean stable branch to produce an NSIS installer in `dist/`.
-Windows packaging and playback still need validation on a Windows machine.
-
-Windows uses Electron audio. ALAC requires FFmpeg on PATH (`ffmpeg.exe`) or the
-`SIDE_B_FFMPEG_PATH` environment variable pointing to the executable. ALAC is
-converted losslessly into a temporary FLAC before playback, so initial loading
-can be slower; a complete file preserves seeking. The most recent conversion is
-cached; the last temporary file may remain after exit. FFmpeg is not bundled.
-The volume slider controls application audio on Windows. Native Smart Fade,
-macOS Now Playing and trackpad haptics remain macOS-only.
-The Windows database is in Electron's userData folder, normally
-`%APPDATA%/Side B/side-b-library.sqlite`.
-
-Library, queue and telemetry rules stay shared. Source codec information is
-stored independently of runtime backend selection, allowing a future native
-Windows engine without duplicating those rules or migrating the library.
-
-## Create and edit playlists
-
-Use **＋ PLAYLIST** below the library search to create a local playlist. The
-editor lets you name it, search indexed songs, add or remove tracks, and move
-tracks up or down. Empty playlists and repeated songs are supported.
-Select a local playlist under **Tapes → Playlists**, then choose **EDIT**.
-Changes are saved together; Cancel or Escape discards the draft.
-
-**SAVE PLAYLIST** above the Mix-Tape opens a new playlist with the whole queue
-in its current order, including repeated songs. Save Playlist and Clear are hidden in Radio mode. Saving or editing does not alter
-the loaded Mix-Tape. To edit an Apple Music import, load it into the Mix-Tape
-and save a local copy.
-
-**CLEAR** removes all other tracks from the Mix-Tape and cancels pending Smart
-Fade work, preserving the current song, position and playing/paused state. It does not delete music files, playlists, Likes or listening history.
-Playlist controls are in the full layout; exit Compact to use them.
-
-## Listening history and queue
-
-The Mix-Tape shows the current song under **NOW PLAYING** and only pending songs
-under **UP NEXT**. Playing a pending song removes that occurrence from the queue.
-OFF and Shuffle stop when no pending tracks remain; Repeat repeats the current song.
-
-Scroll up to NOW PLAYING, pause briefly, then scroll up again to reveal the session
-history. Selecting a history entry replays it without consuming pending songs.
-Each listen remains a separate entry, including repeats and skipped songs that
-started playing. Only visible history rows are rendered, while all entries remain
-in memory. The history survives closing and reopening the macOS window and clears
-when Side B quits. Listening statistics remain stored separately in SQLite.
-
-Clear preserves current playback and history. Save Playlist includes the current
-song and pending songs, excluding history. Both controls are hidden in Radio.
+Contributions are welcome through [CONTRIBUTING.md](CONTRIBUTING.md). The [changelog](CHANGELOG.md) tracks releases, [TODO.md](TODO.md) holds the roadmap, and security concerns can be reported through [SECURITY.md](SECURITY.md). Side B is licensed under [GPL-3.0-only](LICENSE); dependency and media licensing notes are in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
