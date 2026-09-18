@@ -13,8 +13,11 @@ security audit or a statement that every platform is supported.
 - Portable path expectations in tests and syntax checks across source, scripts and tests.
 - Removed personal playlist-name exclusions and automatic deletion of those imports.
 
-GitHub workflows have not run remotely yet. The repository has no configured
-remote, so URLs, repository metadata and hosting settings remain to be configured.
+The public repository is `matias7/side-b`, with `stable` as its default branch.
+The first GitHub CI jobs passed on macOS, Windows and Linux for both branches.
+Later Dependabot upgrades required an ESM import change for `plist` 5, included
+in 0.5.2; review CI again after the fix is pushed to `experimental`.
+The local repository uses its matching SSH key without changing other projects.
 
 ## Resolve before promoting public binaries
 
@@ -38,29 +41,29 @@ remote, so URLs, repository metadata and hosting settings remain to be configure
   with each GPL binary release: tag the exact commit and make its source archive,
   lockfile, native source and build instructions available alongside the installer.
 
-## Before making the GitHub repository public
+## Public repository settings and follow-ups
 
-- [ ] Choose the owner/repository name and add real `repository`, `bugs` and `homepage`
-  package URLs. Do not add placeholder clone links or badges that cannot work.
-- [ ] Confirm ownership or redistribution permission for `assets/side-b-icon.png`
-  and any screenshots. Use original/synthetic art instead of album covers for the
-  README preview unless permission is available.
-- [ ] Decide whether to keep existing commit author email addresses public. The
-  current history contains the maintainer's personal email. Changing future Git
-  configuration does not remove it from old commits. History has not been rewritten.
+- [x] Choose the owner/repository name and add real `repository`, `bugs` and
+  `homepage` package URLs: `matias7/side-b`.
+- [x] Confirm redistribution permission for `assets/side-b-icon.png`; the
+  maintainer confirmed it can be published under GPL-3.0. Use original/synthetic
+  art for any future screenshots instead of album covers unless permission exists.
+- [x] Decide whether to keep existing commit author email addresses public. The
+  maintainer accepts publishing the personal email already present in history.
 - [ ] Enable private vulnerability reporting and dependency/security alerts.
-- [ ] Select `stable` as the release/default branch; route normal contributions to
-  `experimental`. Protect both branches and require the CI checks after their first run.
-- [ ] Review the first three-platform CI run and configure Actions approval for
-  outside contributors. Workflows use read-only permissions and do not publish.
+- [x] Select `stable` as the release/default branch; route normal contributions to
+  `experimental`.
+- [ ] Protect both branches and require the CI checks.
+- [x] Review the first three-platform CI run: all six platform jobs passed.
+  Configure Actions approval for outside contributors as appropriate. Workflows
+  use read-only permissions and do not publish.
 - [ ] Publish a demo screenshot with original assets and a short first-release note
   listing the supported platform and the known Windows/Like limitations.
 
-The review examined all seven reachable commits for common private-key and token
-patterns and for tracked environment files, databases, signing keys, audio and
-build outputs. No matches were found by those checks. This is not a dedicated
-secret scan and cannot prove absence of every possible credential. Run a dedicated
-history secret scanner before the first push, and inspect any future added files.
+The review examined all eight reachable commits for tracked environment files,
+databases, signing keys, audio and build outputs. A full-history Gitleaks 8.30.1
+scan found no leaks. No scanner can prove the absence of every possible credential;
+inspect any future added files before publishing them.
 
 ## Useful follow-up refactors
 

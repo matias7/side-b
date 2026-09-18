@@ -1,11 +1,11 @@
 const fs = require('node:fs/promises');
 const { fileURLToPath } = require('node:url');
-const plist = require('plist');
 const { normalizedTrackKey } = require('../models/track');
 
 function createAppleMusicImporter(database) {
   return async function importAppleMusicPlaylists(xmlPath) {
-    const document = plist.parse(await fs.readFile(xmlPath, 'utf8'));
+    const { parse } = await import('plist');
+    const document = parse(await fs.readFile(xmlPath, 'utf8'));
     const xmlTracks = document.Tracks || {};
     const candidates = (document.Playlists || []).filter((playlist) =>
       !playlist.Master && !playlist.Folder && !playlist['Smart Info'] && !playlist['Smart Criteria'] &&

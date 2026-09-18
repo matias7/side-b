@@ -1,5 +1,6 @@
 import { createRequire } from 'node:module';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import * as plist from 'plist';
 
 const require = createRequire(import.meta.url);
 const fs = require('node:fs/promises');
@@ -7,7 +8,6 @@ const os = require('node:os');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { DatabaseSync } = require('node:sqlite');
-const plist = require('plist');
 const { migrate } = require('../src/main/database/connection');
 const { createAppleMusicImporter } = require('../src/main/services/apple-music-importer');
 

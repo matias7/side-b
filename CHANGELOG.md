@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-18
+
+### Added
+
+- Add real Mix-Tape and Radio screenshots to introduce Side B visually.
+
+### Changed
+
+- Redesign the README with a visual introduction, clearer setup instructions and platform status.
+
+## [0.5.2] - 2026-09-17
+
+### Changed
+
+- Update `plist` to 5.0.0 and Vitest to 5.0.0 after the Dependabot merges.
+- Add the public GitHub repository, issue tracker and homepage to package metadata.
+
+### Fixed
+
+- Restore Apple Music XML imports after the `plist` 5 upgrade by loading its ESM parser.
+
 ## [0.5.1] - 2026-09-17
 
 ### Added
